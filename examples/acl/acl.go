@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
+
+	"go.scj.io/samba-over-ntfs/aclconv"
 )
 
 // Example of system.ntfs_acl value (don't include line breaks):
@@ -32,8 +33,8 @@ func main() {
 		log.Fatal("Unable to access file: ", err)
 	}
 
-	//out, err := exec.Command("getfattr", "--only-values", "-n", "system.ntfs_acl", *filename).Output()
-	out, err := exec.Command("getfattr", "--only-values", "-n", "user.ntfs_acl", *filename).Output()
+	//out, err := acl.GetFAttr("system.ntfs_acl", *filename)
+	out, err := acl.GetFAttr("user.ntfs_acl", *filename)
 	if err != nil {
 		log.Fatal(err)
 	}
