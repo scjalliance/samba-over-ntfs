@@ -36,19 +36,4 @@ func Write(filename string, value []byte) (err error) {
 	aclXattrLock.RLock()
 	defer aclXattrLock.RUnlock()
 	return syscall.Setxattr(filename, aclXattr, value, xattrReplace)
-
-	// aclXattrLock.RLock()
-	// defer aclXattrLock.RUnlock()
-	// cmd := exec.Command("setfattr", "-n", aclXattr, "-v", "0s"+base64.URLEncoding.EncodeToString(value), filename)
-	// stdoutPipe, _ := cmd.StdoutPipe()
-	// stderrPipe, _ := cmd.StderrPipe()
-	// if err := cmd.Start(); err != nil {
-	// 	return nil, nil, err
-	// }
-	// if err := cmd.Wait(); err != nil {
-	// 	return nil, nil, err
-	// }
-	// out, _ = ioutil.ReadAll(stdoutPipe)
-	// stderr, _ = ioutil.ReadAll(stderrPipe)
-	// return out, stderr, err
 }
