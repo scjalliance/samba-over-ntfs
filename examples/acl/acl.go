@@ -6,7 +6,8 @@ import (
 	"log"
 	"os"
 
-	"go.scj.io/samba-over-ntfs/aclconv"
+	"go.scj.io/samba-over-ntfs/ntfsacl"
+	"go.scj.io/samba-over-ntfs/sambaacl"
 )
 
 // Example of system.ntfs_acl value (don't include line breaks):
@@ -15,30 +16,48 @@ import (
 //  AAAAUVAAAACRQ/QoLhMxrMaCWD8QQAAAEFAAAAAAAFFQAAADf5NuUwJ3lK/OGG+8cKAAABBQAAAA
 //  AABRUAAAA3+TblMCd5SvzhhvsBAgAA"
 
-var filename = flag.String("file", "", "File to process ACL")
+var sourceFilename = flag.String("from", "", "File to read NTFS ACL")
+var destinationFilename = flag.String("to", "", "File to write Samba ACL (no write if omitted)")
 
 func main() {
 	flag.Parse()
 
-	if *filename == "" {
+	// FIXME: this is only for initial build so you can test this on a non-NTFS filesystem (otherwise remove entirely)
+	ntfsacl.SetXattr("user.ntfs_acl")
+	// FIXME: this is only for initial build so you can test this without superuser (otherwise remove entirely)
+	sambaacl.SetXattr("user.NTACL")
+
+	if sourceFilename == nil || *sourceFilename == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	_, err := os.Stat(*filename)
-	if os.IsNotExist(err) {
-		log.Fatal(err)
-	}
-	if err != nil {
-		log.Fatal("Unable to access file: ", err)
+	if _, err := os.Stat(*sourceFilename); err != nil {
+		if os.IsNotExist(err) {
+			log.Fatal(err)
+		}
+		log.Fatal("Unable to access source file: ", err)
 	}
 
-	//out, err := acl.GetFAttr("system.ntfs_acl", *filename)
-	out, err := acl.GetFAttr("user.ntfs_acl", *filename)
+	ntfsRawACL, err := ntfsacl.Read(*sourceFilename)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// dump the raw value to the screen (but you should be parsing it instead of just dumping it!)
-	fmt.Println(string(out))
+	if destinationFilename == nil || *destinationFilename == "" {
+		// dump the raw value to the screen (but you should be parsing it instead of just dumping it!)
+		fmt.Println(string(ntfsRawACL))
+		os.Exit(0)
+	}
+
+	if _, err := os.Stat(*destinationFilename); err != nil {
+		if os.IsNotExist(err) {
+			log.Fatal(err)
+		}
+		log.Fatal("Unable to access destination file: ", err)
+	}
+
+	if err := sambaacl.Write(*destinationFilename, ntfsRawACL); err != nil {
+		log.Fatal(err)
+	}
 }
