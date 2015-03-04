@@ -44,7 +44,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	securityDescriptor := new(SecurityDescriptor)
+	securityDescriptor := new(ntfsacl.SecurityDescriptor)
 	// TODO: Write and run NtfsValidate first?
 	securityDescriptor.NtfsDecode(ntfsRawSecurityDescriptor)
 
@@ -64,7 +64,7 @@ func main() {
 		log.Fatal("Unable to access destination file: ", err)
 	}
 
-	if err := sambaacl.Write(*destinationFilename, ntfsRawACL); err != nil {
+	if err := sambaacl.Write(*destinationFilename, ntfsRawSecurityDescriptor); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -84,4 +84,5 @@ func (c SecurityDescriptorControl) NtfsDecode(b []byte) {
 func (s SID) NtfsDecode(b []byte) {
 	n := NativeSID(b)
 	// TODO: Write the mapping code
+	_ = n
 }
