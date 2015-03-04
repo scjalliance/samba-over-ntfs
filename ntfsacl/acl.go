@@ -1,5 +1,7 @@
 package ntfsacl
 
+import "fmt"
+
 type SecurityDescriptor struct {
 	Revision  uint8
 	Alignment uint8
@@ -36,7 +38,7 @@ type SecurityDescriptor struct {
 //  SubAuthority[1] = 544               // DOMAIN_ALIAS_RID_ADMINS
 type SID struct {
 	Revision            uint8
-	SubAuthorityCount   uint8
+	SubAuthorityCount   uint8 // TODO: Consider removing this and just using len(SubAuthority)
 	IdentifierAuthority SidIdentifierAuthority
 	SubAuthority        []uint32
 }
@@ -52,6 +54,18 @@ const (
 	// supported by the ntfsacl package
 	SidMaxSubAuthorities = 15
 )
+
+func (sid SID) String() (output string) {
+	output = "S-"
+	output += fmt.Sprint(sid.Revision)
+	output += "-"
+	output += fmt.Sprint(sid.IdentifierAuthority)
+	for _, subAuth := range sid.SubAuthority {
+		output += "-"
+		output += fmt.Sprint(subAuth)
+	}
+	return
+}
 
 // An ACL starts with an ACL header structure, which specifies the size of
 // the ACL and the number of ACEs it contains. The ACL header is followed by
@@ -145,7 +159,13 @@ func (control SecurityDescriptorControl) HasFlag(flag SecurityDescriptorControl)
 
 type SidIdentifierAuthority [8]uint8
 
-/*
+// See https://msdn.microsoft.com/en-us/library/windows/desktop/aa379649
+
+var (
+	SecurityNullRelativeSID uint32 = 0
+	SecurityWorldRid        uint32 = 1
+)
+
 var (
 	securityNullSidAuthority    = SidIdentifierAuthority{0, 0, 0, 0, 0, 0} // S-1-0
 	securityWorldSidAuthority   = SidIdentifierAuthority{0, 0, 0, 0, 0, 1} // S-1-1
@@ -154,7 +174,6 @@ var (
 	securityNonUniqueAuthority  = SidIdentifierAuthority{0, 0, 0, 0, 0, 4} // S-1-4
 	securityNtSidAuthority      = SidIdentifierAuthority{0, 0, 0, 0, 0, 5} // S-1-5
 )
-*/
 
 // SecurityNullSidAuthority represents SID S-1-0
 func SecurityNullSidAuthority() SidIdentifierAuthority {
@@ -235,12 +254,12 @@ type AceFlag uint8
 
 const (
 	/* The inheritance flags. */
-	ObjectInheritAce      AceFlag = 0x01
-	ContainerInheritAce   AceFlag = 0x02
-	NoPropagateInheritAce AceFlag = 0x04
-	InheritOnlyAce        AceFlag = 0x08
-	InheritedAce          AceFlag = 0x10 /* Win2k only. */
-	ValidInheritFlags     AceFlag = 0x1f
+	ObjectInheritAceFlag      AceFlag = 0x01
+	ContainerInheritAceFlag   AceFlag = 0x02
+	NoPropagateInheritAceFlag AceFlag = 0x04
+	InheritOnlyAceFlag        AceFlag = 0x08
+	InheritedAceFlag          AceFlag = 0x10 /* Win2k only. */
+	ValidInheritAceFlags      AceFlag = 0x1f
 
 	/* The audit flags. */
 	SuccessfulAccessAceFlag AceFlag = 0x40
@@ -365,7 +384,15 @@ const (
 	GenericRead AccessMask = 0x80000000
 )
 
+// An ACE is an access-control entry in an access-control list (ACL).
+// An ACE defines access to an object for a specific user or group or defines
+// the types of access that generate system-administration messages or alarms
+// for a specific user or group. The user or group is identified by a security
+// identifier (SID).
 type ACE interface {
+	Type() AceType
+	Flags() AceFlag
+	Sddl() string
 }
 
 type AceHeader struct {
@@ -379,10 +406,21 @@ type SidAce struct {
 	Sid  SID
 }
 
+func (d SidAce) Type() AceType {
+	return d.AceHeader.Type
+}
+
+func (d SidAce) Flags() AceFlag {
+	return d.AceHeader.Flags
+}
+
 type ObjectAce struct {
 	AceHeader
-	Mask        AccessMask
-	ObjectFlags ObjectAceFlag
+	Mask                AccessMask
+	ObjectFlags         ObjectAceFlag
+	ObjectType          GUID
+	InheritedObjectType GUID
+	Sid                 SID
 }
 
 type AccessAllowedAce SidAce
@@ -394,3 +432,5 @@ type AccessAllowedObjectAce ObjectAce
 type AccessDeniedObjectAce ObjectAce
 type SystemAuditObjectAce ObjectAce
 type SystemAlarmObjectAce ObjectAce
+
+type GUID [16]byte // TODO: Decide whether we really should roll our own GUID type

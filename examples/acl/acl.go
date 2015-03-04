@@ -39,14 +39,21 @@ func main() {
 		log.Fatal("Unable to access source file: ", err)
 	}
 
-	ntfsRawACL, err := ntfsacl.Read(*sourceFilename)
+	ntfsRawSecurityDescriptor, err := ntfsacl.Read(*sourceFilename)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	securityDescriptor := new(SecurityDescriptor)
+	// TODO: Write and run NtfsValidate first?
+	securityDescriptor.NtfsDecode(ntfsRawSecurityDescriptor)
+
 	if destinationFilename == nil || *destinationFilename == "" {
-		// dump the raw value to the screen (but you should be parsing it instead of just dumping it!)
-		fmt.Println(string(ntfsRawACL))
+		// Dump the raw value to the screen
+		fmt.Println(string(ntfsRawSecurityDescriptor))
+
+		// Write the SDDL representation of the security descriptor to the screen
+		fmt.Println(securityDescriptor.Sddl())
 		os.Exit(0)
 	}
 
