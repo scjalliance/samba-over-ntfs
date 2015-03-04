@@ -44,9 +44,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	securityDescriptor := new(ntfsacl.SecurityDescriptor)
 	// TODO: Write and run NtfsValidate first?
-	securityDescriptor.NtfsDecode(ntfsRawSecurityDescriptor)
+	securityDescriptor := ntfsacl.NtfsDecodeSecurityDescriptor(ntfsRawSecurityDescriptor)
 
 	if destinationFilename == nil || *destinationFilename == "" {
 		// Dump the raw value to the screen

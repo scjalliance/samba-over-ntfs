@@ -41,6 +41,9 @@ func (sd SecurityDescriptor) Sddl() string {
 func (acl ACL) Sddl() string {
 	output := ""
 	for _, entry := range acl.Entries {
+		if entry == nil {
+			panic(entry) // FIXME! decode.go line 61
+		}
 		output += entry.Sddl()
 	}
 	return output
