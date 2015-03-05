@@ -171,13 +171,13 @@ func (b NativeSID) SubAuthorityCount() uint8 {
 // IdentifierAuthority returns the identifier authority of the security
 // identifier.
 func (b NativeSID) IdentifierAuthority() SidIdentifierAuthority {
-	return SidIdentifierAuthority{b[5], b[4], b[3], b[2], b[1], b[0]}
+	return SidIdentifierAuthority{b[2], b[3], b[4], b[5], b[6], b[7]} // Big endian
 }
 
 // SubAuthority returns the sub authority of the given index for the security
 // identifier.
 func (b NativeSID) SubAuthority(index uint8) uint32 {
-	start := 6 + index*4
+	start := 8 + index*4
 	end := start + 4
 	return binary.LittleEndian.Uint32(b[start:end])
 }
