@@ -8,7 +8,7 @@ func GetFileRawSD(filename string) ([]byte, error) {
 	aclXattrLock.RLock()
 	defer aclXattrLock.RUnlock()
 	sz, err := syscall.Getxattr(filename, aclXattr, nil)
-	out = make([]byte, sz)
+	out := make([]byte, sz)
 	_, err = syscall.Getxattr(filename, aclXattr, out)
 	return out, err
 }

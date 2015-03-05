@@ -23,7 +23,7 @@ func main() {
 	flag.Parse()
 
 	// FIXME: this is only for initial build so you can test this on a non-NTFS filesystem (otherwise remove entirely)
-	ntfsacl.SetSDAttrName("user.ntfs_acl")
+	ntfsacl.SetFileSDAttrName("user.ntfs_acl")
 	// FIXME: this is only for initial build so you can test this without superuser (otherwise remove entirely)
 	sambaacl.SetXattr("user.NTACL")
 
@@ -52,7 +52,7 @@ func main() {
 		//fmt.Println(string(ntfsRawSecurityDescriptor))
 
 		// Write the SDDL representation of the security descriptor to the screen
-		fmt.Println(securityDescriptor.Sddl())
+		fmt.Println(sd.Sddl())
 		os.Exit(0)
 	}
 
@@ -63,7 +63,7 @@ func main() {
 		log.Fatal("Unable to access destination file: ", err)
 	}
 
-	if err := sambaacl.Write(*destinationFilename, ntfsRawSecurityDescriptor); err != nil {
+	if err := sambaacl.Write(*destinationFilename, sdBytes); err != nil {
 		log.Fatal(err)
 	}
 }
