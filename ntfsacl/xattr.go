@@ -1,26 +1,23 @@
 package ntfsacl
 
-import (
-	"sync"
-	"syscall"
-)
+import "sync"
 
 var aclXattrLock sync.RWMutex
 var aclXattr = "system.ntfs_acl"
 
-// SetXattr will override the default "system.ntfs_acl" for dev/test purposes
-func SetXattr(xattr string) {
+// SetFileSDAttrName will override the default "system.ntfs_acl" for dev/test purposes
+func SetFileSDAttrName(xattr string) {
 	aclXattrLock.Lock()
 	defer aclXattrLock.Unlock()
 	aclXattr = xattr
 }
 
-// Read will return the raw NTFS-stored ACL for the requested file
-func Read(filename string) (out []byte, err error) {
-	aclXattrLock.RLock()
-	defer aclXattrLock.RUnlock()
-	sz, err := syscall.Getxattr(filename, aclXattr, nil)
-	out = make([]byte, sz)
-	_, err = syscall.Getxattr(filename, aclXattr, out)
-	return out, err
+// GetFileSD will return the security descriptor for the requested file
+func GetFileSD(filename string) (*SecurityDescriptor, error) {
+	bytes, err := GetFileRawSD(filename)
+	if err != nil {
+		return nil, err
+	}
+	sd := NtfsDecodeSecurityDescriptor(bytes)
+	return sd, nil
 }

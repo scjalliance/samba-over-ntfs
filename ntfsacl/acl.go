@@ -88,6 +88,21 @@ const (
 	AclMaxRevision = 4
 )
 
+// An ACE is an access-control entry in an access-control list (ACL).
+// An ACE defines access to an object for a specific user or group or defines
+// the types of access that generate system-administration messages or alarms
+// for a specific user or group. The user or group is identified by a security
+// identifier (SID).
+type ACE struct {
+	Type                AceType
+	Flags               AceFlag
+	Mask                AccessMask
+	Sid                 SID
+	ObjectFlags         ObjectAceFlag
+	ObjectType          GUID
+	InheritedObjectType GUID
+}
+
 // SecurityDescriptorControl stores descriptor control flags, which guide the
 // interpretation of security descriptors.
 type SecurityDescriptorControl uint16
@@ -383,54 +398,5 @@ const (
 	// GenericRead
 	GenericRead AccessMask = 0x80000000
 )
-
-// An ACE is an access-control entry in an access-control list (ACL).
-// An ACE defines access to an object for a specific user or group or defines
-// the types of access that generate system-administration messages or alarms
-// for a specific user or group. The user or group is identified by a security
-// identifier (SID).
-type ACE interface {
-	Type() AceType
-	Flags() AceFlag
-	Sddl() string
-}
-
-type AceHeader struct {
-	Type  AceType
-	Flags AceFlag
-}
-
-type SidAce struct {
-	AceHeader
-	Mask AccessMask
-	Sid  SID
-}
-
-func (d SidAce) Type() AceType {
-	return d.AceHeader.Type
-}
-
-func (d SidAce) Flags() AceFlag {
-	return d.AceHeader.Flags
-}
-
-type ObjectAce struct {
-	AceHeader
-	Mask                AccessMask
-	ObjectFlags         ObjectAceFlag
-	ObjectType          GUID
-	InheritedObjectType GUID
-	Sid                 SID
-}
-
-type AccessAllowedAce SidAce
-type AccessDeniedAce SidAce
-type SystemAuditAce SidAce
-type SystemAlarmAce SidAce
-
-type AccessAllowedObjectAce ObjectAce
-type AccessDeniedObjectAce ObjectAce
-type SystemAuditObjectAce ObjectAce
-type SystemAlarmObjectAce ObjectAce
 
 type GUID [16]byte // TODO: Decide whether we really should roll our own GUID type

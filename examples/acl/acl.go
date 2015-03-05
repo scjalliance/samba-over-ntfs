@@ -23,7 +23,7 @@ func main() {
 	flag.Parse()
 
 	// FIXME: this is only for initial build so you can test this on a non-NTFS filesystem (otherwise remove entirely)
-	ntfsacl.SetXattr("user.ntfs_acl")
+	ntfsacl.SetSDAttrName("user.ntfs_acl")
 	// FIXME: this is only for initial build so you can test this without superuser (otherwise remove entirely)
 	sambaacl.SetXattr("user.NTACL")
 
@@ -39,17 +39,17 @@ func main() {
 		log.Fatal("Unable to access source file: ", err)
 	}
 
-	ntfsRawSecurityDescriptor, err := ntfsacl.Read(*sourceFilename)
+	sdBytes, err := ntfsacl.GetFileRawSD(*sourceFilename)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// TODO: Write and run NtfsValidate first?
-	securityDescriptor := ntfsacl.NtfsDecodeSecurityDescriptor(ntfsRawSecurityDescriptor)
+	sd := ntfsacl.NtfsDecodeSecurityDescriptor(sdBytes)
 
 	if destinationFilename == nil || *destinationFilename == "" {
-		// Dump the raw value to the screen
-		fmt.Println(string(ntfsRawSecurityDescriptor))
+		// When no destination is provided we dump the raw value to the screen
+		//fmt.Println(string(ntfsRawSecurityDescriptor))
 
 		// Write the SDDL representation of the security descriptor to the screen
 		fmt.Println(securityDescriptor.Sddl())
