@@ -59,7 +59,7 @@ func (sid SID) String() (output string) {
 	output = "S-"
 	output += fmt.Sprint(sid.Revision)
 	output += "-"
-	output += fmt.Sprint(sid.IdentifierAuthority)
+	output += fmt.Sprint(sid.IdentifierAuthority.Uint64())
 	for _, subAuth := range sid.SubAuthority {
 		output += "-"
 		output += fmt.Sprint(subAuth)
@@ -172,7 +172,11 @@ func (control SecurityDescriptorControl) HasFlag(flag SecurityDescriptorControl)
 	return control|flag == control
 }
 
-type SidIdentifierAuthority [8]uint8
+type SidIdentifierAuthority [6]uint8
+
+func (b SidIdentifierAuthority) Uint64() uint64 {
+	return uint64(b[0])<<38 | uint64(b[1])<<30 | uint64(b[2])<<24 | uint64(b[3])<<16 | uint64(b[4])<<8 | uint64(b[5])
+}
 
 // See https://msdn.microsoft.com/en-us/library/windows/desktop/aa379649
 
