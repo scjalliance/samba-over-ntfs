@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"go.scj.io/samba-over-ntfs/ntfsacl"
-	"go.scj.io/samba-over-ntfs/sambaacl"
 )
 
 // Example of system.ntfs_acl value (don't include line breaks):
@@ -25,7 +24,7 @@ func main() {
 	// FIXME: this is only for initial build so you can test this on a non-NTFS filesystem (otherwise remove entirely)
 	ntfsacl.SetFileSDAttrName("user.ntfs_acl")
 	// FIXME: this is only for initial build so you can test this without superuser (otherwise remove entirely)
-	sambaacl.SetXattr("user.NTACL")
+	//sambaacl.SetXattr("user.NTACL")
 
 	if sourceFilename == nil || *sourceFilename == "" {
 		flag.Usage()
@@ -63,7 +62,7 @@ func main() {
 		log.Fatal("Unable to access destination file: ", err)
 	}
 
-	if err := sambaacl.Write(*destinationFilename, sdBytes); err != nil {
-		log.Fatal(err)
-	}
+	// if err := sambaacl.Write(*destinationFilename, sdBytes); err != nil {
+	// 	log.Fatal(err)
+	// }
 }
