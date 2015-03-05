@@ -5,8 +5,8 @@ import "encoding/binary"
 // NtfsDecodeSecurityDescriptor reads a security descriptor from a byte slice containing data
 // formatted according to an NTFS on-disk data layout.
 func NtfsDecodeSecurityDescriptor(b []byte) *SecurityDescriptor {
-	d := new(SecurityDescriptor)
 	n := NativeSecurityDescriptor(b)
+	d := new(SecurityDescriptor)
 	d.Revision = n.Revision()
 	d.Alignment = n.Alignment()
 	d.Control = n.Control()
@@ -44,8 +44,8 @@ func NtfsDecodeSecurityDescriptor(b []byte) *SecurityDescriptor {
 // NtfsDecodeACL reads an access control list from a byte slice containing data
 // formatted according to an NTFS on-disk data layout.
 func NtfsDecodeACL(b []byte) *ACL {
-	acl := new(ACL)
 	n := NativeACL(b)
+	acl := new(ACL)
 	acl.Revision = n.Revision()
 	acl.Alignment1 = n.Alignment1()
 	acl.Alignment2 = n.Alignment2()
@@ -78,9 +78,17 @@ func NtfsDecodeSecurityDescriptorControl(b []byte) SecurityDescriptorControl {
 // NtfsDecodeSID reads a security identifier from a byte slice containing
 // data formatted according to an NTFS on-disk data layout.
 func NtfsDecodeSID(b []byte) *SID {
-	s := new(SID)
 	n := NativeSID(b)
-	// TODO: Write the mapping code
-	_ = n
+	s := new(SID)
+	s.Revision = n.Revision()
+	s.SubAuthorityCount = n.SubAuthorityCount()
+	if s.SubAuthorityCount > SidMaxSubAuthorities {
+		s.SubAuthorityCount = SidMaxSubAuthorities
+	}
+	s.IdentifierAuthority = n.IdentifierAuthority()
+	s.SubAuthority = make([]uint32, s.SubAuthorityCount)
+	for i := uint8(0); i < s.SubAuthorityCount; i++ {
+		s.SubAuthority[i] = n.SubAuthority(i)
+	}
 	return s
 }
