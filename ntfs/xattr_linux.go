@@ -1,4 +1,4 @@
-package ntfsacl
+package ntfs
 
 import "syscall"
 

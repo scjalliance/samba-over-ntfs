@@ -1,4 +1,4 @@
-package ntfsacl
+package ntsd
 
 import "fmt"
 

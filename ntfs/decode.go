@@ -1,51 +1,55 @@
-package ntfsacl
+package ntfs
 
-import "encoding/binary"
+import (
+	"encoding/binary"
 
-// NTFSDecodeSecurityDescriptor reads a security descriptor from a byte slice containing data
+	"go.scj.io/samba-over-ntfs/ntsd"
+)
+
+// UnmarshalSecurityDescriptor reads a security descriptor from a byte slice containing data
 // formatted according to an NTFS on-disk data layout.
-func NTFSDecodeSecurityDescriptor(b []byte) *SecurityDescriptor {
+func UnmarshalSecurityDescriptor(b []byte) *ntsd.SecurityDescriptor {
 	n := NativeSecurityDescriptor(b)
-	d := new(SecurityDescriptor)
+	d := new(ntsd.SecurityDescriptor)
 	d.Revision = n.Revision()
 	d.Alignment = n.Alignment()
 	d.Control = n.Control()
 	if n.OwnerOffset() > 0 {
 		// FIXME: Validate SID before allocating memory?
 		// TODO: Consider moving the memory allocation to NtfsDecode.
-		d.Owner = NTFSDecodeSID(b[n.OwnerOffset():]) // FIXME: Use the correct end of the SID byte slice?
+		d.Owner = UnmarshalSID(b[n.OwnerOffset():]) // FIXME: Use the correct end of the SID byte slice?
 	} else {
 		d.Owner = nil
 	}
 	if n.GroupOffset() > 0 {
 		// FIXME: Validate SID before allocating memory?
 		// TODO: Consider moving the memory allocation to NtfsDecode.
-		d.Group = NTFSDecodeSID(b[n.GroupOffset():]) // FIXME: Use the correct end of the SID byte slice?
+		d.Group = UnmarshalSID(b[n.GroupOffset():]) // FIXME: Use the correct end of the SID byte slice?
 	} else {
 		d.Group = nil
 	}
-	if d.Control.HasFlag(SACLPresent) && n.SACLOffset() > 0 {
+	if d.Control.HasFlag(ntsd.SACLPresent) && n.SACLOffset() > 0 {
 		// FIXME: Validate ACL before allocating memory?
 		// TODO: Consider moving the memory allocation to NtfsDecode.
-		d.SACL = NTFSDecodeACL(b[n.SACLOffset():]) // FIXME: Use the correct end of the ACL byte slice?
+		d.SACL = UnmarshalACL(b[n.SACLOffset():]) // FIXME: Use the correct end of the ACL byte slice?
 	} else {
 		d.SACL = nil
 	}
-	if d.Control.HasFlag(DACLPresent) && n.DACLOffset() > 0 {
+	if d.Control.HasFlag(ntsd.DACLPresent) && n.DACLOffset() > 0 {
 		// FIXME: Validate ACL before allocating memory?
 		// TODO: Consider moving the memory allocation to NtfsDecode.
-		d.DACL = NTFSDecodeACL(b[n.DACLOffset():]) // FIXME: Use the correct end of the ACL byte slice?
+		d.DACL = UnmarshalACL(b[n.DACLOffset():]) // FIXME: Use the correct end of the ACL byte slice?
 	} else {
 		d.DACL = nil
 	}
 	return d
 }
 
-// NTFSDecodeACL reads an access control list from a byte slice containing data
+// UnmarshalACL reads an access control list from a byte slice containing data
 // formatted according to an NTFS on-disk data layout.
-func NTFSDecodeACL(b []byte) *ACL {
+func UnmarshalACL(b []byte) *ntsd.ACL {
 	n := NativeACL(b)
-	acl := new(ACL)
+	acl := new(ntsd.ACL)
 	acl.Revision = n.Revision()
 	acl.Alignment1 = n.Alignment1()
 	acl.Alignment2 = n.Alignment2()
@@ -55,7 +59,7 @@ func NTFSDecodeACL(b []byte) *ACL {
 		// TODO: Consider the correct location of this memory allocation
 		// TODO: Consider the creation of a NativeAceArray type
 		if len(acl.Entries) != count {
-			acl.Entries = make([]ACE, count)
+			acl.Entries = make([]ntsd.ACE, count)
 		}
 		for i := 0; i < count; i++ {
 			// TODO: Decode the access control entries
@@ -66,24 +70,24 @@ func NTFSDecodeACL(b []byte) *ACL {
 	return acl
 }
 
-// NTFSDecodeSecurityDescriptorControl reads a security descriptor control from a byte slice containing
+// UnmarshalSecurityDescriptorControl reads a security descriptor control from a byte slice containing
 // data formatted according to an NTFS on-disk data layout.
 //
 // TODO: Decide whether this is redundant in light of the Control() function
 // on the NativeSecurityDescriptor type.
-func NTFSDecodeSecurityDescriptorControl(b []byte) SecurityDescriptorControl {
-	return SecurityDescriptorControl(binary.LittleEndian.Uint16(b[0:2]))
+func UnmarshalSecurityDescriptorControl(b []byte) ntsd.SecurityDescriptorControl {
+	return ntsd.SecurityDescriptorControl(binary.LittleEndian.Uint16(b[0:2]))
 }
 
-// NTFSDecodeSID reads a security identifier from a byte slice containing
+// UnmarshalSID reads a security identifier from a byte slice containing
 // data formatted according to an NTFS on-disk data layout.
-func NTFSDecodeSID(b []byte) *SID {
+func UnmarshalSID(b []byte) *ntsd.SID {
 	n := NativeSID(b)
-	s := new(SID)
+	s := new(ntsd.SID)
 	s.Revision = n.Revision()
 	s.SubAuthorityCount = n.SubAuthorityCount()
-	if s.SubAuthorityCount > SidMaxSubAuthorities {
-		s.SubAuthorityCount = SidMaxSubAuthorities
+	if s.SubAuthorityCount > ntsd.SidMaxSubAuthorities {
+		s.SubAuthorityCount = ntsd.SidMaxSubAuthorities
 	}
 	s.IdentifierAuthority = n.IdentifierAuthority()
 	s.SubAuthority = make([]uint32, s.SubAuthorityCount)

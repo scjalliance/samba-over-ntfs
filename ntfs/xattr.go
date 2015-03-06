@@ -1,6 +1,10 @@
-package ntfsacl
+package ntfs
 
-import "sync"
+import (
+	"sync"
+
+	"go.scj.io/samba-over-ntfs/ntsd"
+)
 
 var aclXattrLock sync.RWMutex
 var aclXattr = "system.ntfs_acl"
@@ -13,11 +17,11 @@ func SetFileSDAttrName(xattr string) {
 }
 
 // GetFileSD will return the security descriptor for the requested file
-func GetFileSD(filename string) (*SecurityDescriptor, error) {
+func GetFileSD(filename string) (*ntsd.SecurityDescriptor, error) {
 	bytes, err := GetFileRawSD(filename)
 	if err != nil {
 		return nil, err
 	}
-	sd := NTFSDecodeSecurityDescriptor(bytes)
+	sd := UnmarshalSecurityDescriptor(bytes)
 	return sd, nil
 }

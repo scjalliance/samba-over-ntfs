@@ -1,6 +1,10 @@
-package ntfsacl
+package ntfs
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+
+	"go.scj.io/samba-over-ntfs/ntsd"
+)
 
 // NativeSecurityDescriptor is a byte slice wrapper that acts as a translator
 // for the on-disk representation of security descriptors. One of its functions
@@ -15,8 +19,8 @@ func (b NativeSecurityDescriptor) Alignment() uint8 { return b[1] }
 
 // Control contains the flags qualifying the type of the descriptor and
 // providing context for the owner, group, system ACL and discretionary ACL.
-func (b NativeSecurityDescriptor) Control() SecurityDescriptorControl {
-	return SecurityDescriptorControl(binary.LittleEndian.Uint16(b[2:4]))
+func (b NativeSecurityDescriptor) Control() ntsd.SecurityDescriptorControl {
+	return ntsd.SecurityDescriptorControl(binary.LittleEndian.Uint16(b[2:4]))
 }
 
 // OwnerOffset is a byte offset to a SID representing an object's owner. If this
@@ -107,7 +111,9 @@ type NativeSidACE []byte
 
 // Mask defines the access mask of the access control entry, which encapsulates
 // the access privileges that the access control entry is specifying.
-func (b NativeSidACE) Mask() AccessMask { return AccessMask(binary.LittleEndian.Uint32(b[4:8])) }
+func (b NativeSidACE) Mask() ntsd.AccessMask {
+	return ntsd.AccessMask(binary.LittleEndian.Uint32(b[4:8]))
+}
 
 // Sid defines the security identifier that the access control entry applies to.
 func (b NativeSidACE) Sid() NativeSID { return NativeSID(b[8:]) }
@@ -123,11 +129,13 @@ type NativeObjectACE []byte
 
 // Mask defines the access mask of the access control entry, which encapsulates
 // the access privileges that the access control entry is specifying.
-func (b NativeObjectACE) Mask() AccessMask { return AccessMask(binary.LittleEndian.Uint32(b[4:8])) }
+func (b NativeObjectACE) Mask() ntsd.AccessMask {
+	return ntsd.AccessMask(binary.LittleEndian.Uint32(b[4:8]))
+}
 
 // ObjectFlags
-func (b NativeObjectACE) ObjectFlags() ObjectAccessControlFlag {
-	return ObjectAccessControlFlag(binary.LittleEndian.Uint32(b[8:12]))
+func (b NativeObjectACE) ObjectFlags() ntsd.ObjectAccessControlFlag {
+	return ntsd.ObjectAccessControlFlag(binary.LittleEndian.Uint32(b[8:12]))
 }
 
 // ObjectType
@@ -170,8 +178,8 @@ func (b NativeSID) SubAuthorityCount() uint8 {
 
 // IdentifierAuthority returns the identifier authority of the security
 // identifier.
-func (b NativeSID) IdentifierAuthority() IdentifierAuthority {
-	return IdentifierAuthority{b[2], b[3], b[4], b[5], b[6], b[7]} // Big endian
+func (b NativeSID) IdentifierAuthority() ntsd.IdentifierAuthority {
+	return ntsd.IdentifierAuthority{b[2], b[3], b[4], b[5], b[6], b[7]} // Big endian
 }
 
 // SubAuthority returns the sub authority of the given index for the security

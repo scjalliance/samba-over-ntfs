@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"go.scj.io/samba-over-ntfs/ntfsacl"
+	"go.scj.io/samba-over-ntfs/ntfs"
 )
 
 // Example of system.ntfs_acl value (don't include line breaks):
@@ -22,7 +22,7 @@ func main() {
 	flag.Parse()
 
 	// FIXME: this is only for initial build so you can test this on a non-NTFS filesystem (otherwise remove entirely)
-	ntfsacl.SetFileSDAttrName("user.ntfs_acl")
+	ntfs.SetFileSDAttrName("user.ntfs_acl")
 	// FIXME: this is only for initial build so you can test this without superuser (otherwise remove entirely)
 	//sambaacl.SetXattr("user.NTACL")
 
@@ -38,13 +38,13 @@ func main() {
 		log.Fatal("Unable to access source file: ", err)
 	}
 
-	sdBytes, err := ntfsacl.GetFileRawSD(*sourceFilename)
+	sdBytes, err := ntfs.GetFileRawSD(*sourceFilename)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// TODO: Write and run NtfsValidate first?
-	sd := ntfsacl.NTFSDecodeSecurityDescriptor(sdBytes)
+	sd := ntfs.UnmarshalSecurityDescriptor(sdBytes)
 
 	if destinationFilename == nil || *destinationFilename == "" {
 		// When no destination is provided we dump the raw value to the screen
