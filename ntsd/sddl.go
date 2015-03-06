@@ -1,6 +1,10 @@
 package ntsd
 
-import "fmt"
+import (
+	"encoding/binary"
+	"encoding/hex"
+	"fmt"
+)
 
 const (
 	sddlOwnerTag = "O"
@@ -9,8 +13,17 @@ const (
 	sddlSACLTag  = "S"
 )
 
+const (
+	sddlProtectedTag       = "P"
+	sddlAutoInheritReqTag  = "AR"
+	sddlAutoInheritedTag   = "AI"
+	sddlNoAccessControlTag = "NO_ACCESS_CONTROL"
+)
+
 // SDDL returns a string representation of the security identifier in the format
 // expected by the security descriptor definition language.
+//
+// See: https://msdn.microsoft.com/en-us/library/aa379570
 func (sd SecurityDescriptor) SDDL() string {
 	output := ""
 	if sd.Owner != nil {
@@ -21,16 +34,36 @@ func (sd SecurityDescriptor) SDDL() string {
 	}
 	if sd.Control.HasFlag(DACLPresent) {
 		output += sddlDACLTag + ":"
+		if sd.Control.HasFlag(DACLProtected) {
+			output += sddlProtectedTag
+		}
+		if sd.Control.HasFlag(DACLAutoInheritReq) {
+			output += sddlAutoInheritReqTag
+		}
+		if sd.Control.HasFlag(DACLAutoInherited) {
+			output += sddlAutoInheritedTag
+		}
 		if sd.DACL != nil {
-			// TODO: Handle the relevant DACL control flags
 			output += sd.DACL.SDDL()
+		} else {
+			output += sddlNoAccessControlTag
 		}
 	}
 	if sd.Control.HasFlag(SACLPresent) {
 		output += sddlSACLTag + ":"
+		if sd.Control.HasFlag(SACLProtected) {
+			output += sddlProtectedTag
+		}
+		if sd.Control.HasFlag(SACLAutoInheritReq) {
+			output += sddlAutoInheritReqTag
+		}
+		if sd.Control.HasFlag(SACLAutoInherited) {
+			output += sddlAutoInheritedTag
+		}
 		if sd.SACL != nil {
-			// TODO: Handle the relevant SACL control flags
 			output += sd.SACL.SDDL()
+		} else {
+			output += sddlNoAccessControlTag
 		}
 	}
 	return output
@@ -49,8 +82,25 @@ func (acl ACL) SDDL() string {
 // SDDL returns a string representation of the access control entry in the
 // format expected by the security descriptor definition language.
 func (ace ACE) SDDL() string {
-	// TODO: Write this function
-	return ""
+	output := "("
+	output += ace.Type.SDDL()
+	output += ";"
+	output += ace.Flags.SDDL()
+	output += ";"
+	output += ace.Mask.SDDL()
+	switch ace.Type {
+	case AccessAllowedObjectControl, AccessDeniedObjectControl, SystemAuditObjectControl, SystemAlarmObjectControl:
+		output += ";"
+		output += ace.ObjectType.String()
+		output += ";"
+		output += ace.InheritedObjectType.String()
+	default:
+		output += ";;"
+	}
+	output += ";"
+	output += ace.SID.SDDL()
+	output += ")"
+	return output
 }
 
 // See: https://msdn.microsoft.com/en-us/library/aa379602
@@ -194,4 +244,59 @@ func (f AccessControlFlag) SDDL() string {
 		s += sddlFailedAccessTag
 	}
 	return s
+}
+
+// See: https://msdn.microsoft.com/en-us/library/aa374928
+// See: https://msdn.microsoft.com/en-us/library/gg258116
+
+const (
+	// Generic access rights
+	sddlGenericAllTag     = "GA"
+	sddlGenericReadTag    = "GR"
+	sddlGenericWriteTag   = "GW"
+	sddlGenericExecuteTag = "GX"
+
+	// Standard access rights
+	sddlReadControlTag    = "RC"
+	sddlStandardDeleteTag = "SD"
+	sddlWriteDACTag       = "WD"
+	sddlWriteOwnerTag     = "WO"
+
+	// Directory service rights (what the heck are these?)
+
+	// File access rights
+	sddlFileAllTag       = "FA"
+	sddlFileReadDataTag  = "FR"
+	sddlFileWriteDataTag = "FW"
+	sddlFileExecuteTag   = "FX"
+
+	// Unknown mappings
+	/*
+		sddlStandardRightsReadTag = ""
+		sddlStandardRightsWriteTag = ""
+		sddlStandardRightsExecuteTag = ""
+		sddlStandardRightsRequiredTag = ""
+		sddlStandardRightsAllTag = ""
+		sddlFileListDirectoryTag = ""
+		sddlFileAddFileTag = ""
+		sddlFileAppendDataTag = ""
+		sddlFileAddSubdirectoryTag = ""
+		sddlFileReadEATag = ""
+		sddlFileWriteEATag = ""
+		sddlFileTraverseTag = ""
+		sddlFileDeleteChildTag = ""
+		sddlFileReadAttributesTag = ""
+		sddlFileWriteAttributesTag = ""
+		sddlAccessSystemSecurityTag = ""
+		sddlMaximumAllowedTag = ""
+	*/
+)
+
+// SDDL returns a string representation of the access mask in the format
+// expected by the security descriptor definition language.
+func (m AccessMask) SDDL() string {
+	// TODO: Return the well known string representations?
+	b := [4]byte{}
+	binary.BigEndian.PutUint32(b[:], uint32(m))
+	return "0x" + hex.EncodeToString(b[:])
 }

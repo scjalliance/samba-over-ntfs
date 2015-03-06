@@ -1,6 +1,9 @@
 package ntsd
 
-import "fmt"
+import (
+	"encoding/hex"
+	"fmt"
+)
 
 type SecurityDescriptor struct {
 	Revision  uint8
@@ -400,3 +403,19 @@ const (
 )
 
 type GUID [16]byte // TODO: Decide whether we really should roll our own GUID type
+
+// See: http://en.wikipedia.org/wiki/Universally_unique_identifier
+
+func (g GUID) String() string {
+	output := ""
+	output += hex.EncodeToString(g[0:4])
+	output += "-"
+	output += hex.EncodeToString(g[4:6])
+	output += "-"
+	output += hex.EncodeToString(g[6:8])
+	output += "-"
+	output += hex.EncodeToString(g[8:10])
+	output += "-"
+	output += hex.EncodeToString(g[10:16])
+	return output
+}
