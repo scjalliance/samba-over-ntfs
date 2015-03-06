@@ -74,49 +74,58 @@ func (b NativeACL) Revision() uint8 { return b[0] }
 func (b NativeACL) Alignment1() uint8 { return b[1] }
 
 // Alignment2 data reserved for future use.
-func (b NativeACL) Alignment2() uint16 { return binary.LittleEndian.Uint16(b[2:4]) }
+func (b NativeACL) Alignment2() uint16 { return binary.LittleEndian.Uint16(b[6:8]) }
 
 // Size in bytes of the NativeACL
 func (b NativeACL) Size() uint16 {
 	return binary.LittleEndian.Uint16(b[2:4])
 }
 
-// AceCount is the number of access control entries in the access control list.
-func (b NativeACL) AceCount() uint16 {
+// Count returns the number of access control entries in the access control
+// list.
+func (b NativeACL) Count() uint16 {
 	return binary.LittleEndian.Uint16(b[4:6])
 }
 
-// NativeAceHeader is a byte slice wrapper that acts as a translator
+// Offset is a byte offset to the first access control entry.
+//
+// The offset is in bytes and is relative to the start of the
+// NativeACL.
+func (b NativeACL) Offset() uint16 {
+	return 8
+}
+
+// NativeACEHeader is a byte slice wrapper that acts as a translator
 // for the on-disk representation of access control entry headers. One of its
 // functions is to convert member values into the appropriate endianness.
-type NativeAceHeader []byte
+type NativeACEHeader []byte
 
 // Type of the access control entry
-func (b NativeAceHeader) Type() uint8 { return b[0] }
+func (b NativeACEHeader) Type() ntsd.AccessControlType { return ntsd.AccessControlType(b[0]) }
 
 // Flags describing the access control entry
-func (b NativeAceHeader) Flags() uint8 { return b[1] }
+func (b NativeACEHeader) Flags() ntsd.AccessControlFlag { return ntsd.AccessControlFlag(b[1]) }
 
 // Size in bytes of the access control entry
-func (b NativeAceHeader) Size() uint16 { return binary.LittleEndian.Uint16(b[2:4]) }
+func (b NativeACEHeader) Size() uint16 { return binary.LittleEndian.Uint16(b[2:4]) }
 
-// NativeSidACE is a byte slice wrapper that acts as a translator
-// for the on-disk representation of access control entries that apply to
-// security identifiers. One of its functions is to convert member values into
-// the appropriate endianness.
+// NativeACE is a byte slice wrapper that acts as a translator for the on-disk
+// representation of access control entries that apply to security identifiers.
+// One of its functions is to convert member values into the appropriate
+// endianness.
 //
 // This type expects byte 0 of the underlying slice to be the start of the ACE
 // header structure.
-type NativeSidACE []byte
+type NativeACE NativeACEHeader
 
 // Mask defines the access mask of the access control entry, which encapsulates
 // the access privileges that the access control entry is specifying.
-func (b NativeSidACE) Mask() ntsd.AccessMask {
+func (b NativeACE) Mask() ntsd.AccessMask {
 	return ntsd.AccessMask(binary.LittleEndian.Uint32(b[4:8]))
 }
 
-// Sid defines the security identifier that the access control entry applies to.
-func (b NativeSidACE) Sid() NativeSID { return NativeSID(b[8:]) }
+// SID defines the security identifier that the access control entry applies to.
+func (b NativeACE) SID() ntsd.SID { return UnmarshalSID(b[8:]) }
 
 // NativeObjectACE is a byte slice wrapper that acts as a translator
 // for the on-disk representation of access control entries that apply to
@@ -125,7 +134,7 @@ func (b NativeSidACE) Sid() NativeSID { return NativeSID(b[8:]) }
 //
 // This type expects byte 0 of the underlying slice to be the start of the ACE
 // header structure.
-type NativeObjectACE []byte
+type NativeObjectACE NativeACEHeader
 
 // Mask defines the access mask of the access control entry, which encapsulates
 // the access privileges that the access control entry is specifying.
@@ -139,25 +148,25 @@ func (b NativeObjectACE) ObjectFlags() ntsd.ObjectAccessControlFlag {
 }
 
 // ObjectType
-func (b NativeObjectACE) ObjectType() NativeGUID {
-	return NativeGUID(b[12:28])
+func (b NativeObjectACE) ObjectType() ntsd.GUID {
+	return UnmarshalGUID(b[12:28])
 }
 
-func (b NativeObjectACE) InheritedObjectType() NativeGUID {
+func (b NativeObjectACE) InheritedObjectType() ntsd.GUID {
 	// FIXME: Determine whether the location of this member varies based on the
 	// flags.
 	//
 	// See https://msdn.microsoft.com/en-us/library/windows/desktop/aa374857
-	return NativeGUID(b[28:44])
+	return UnmarshalGUID(b[28:44])
 }
 
-// Sid defines the security identifier that the access control entry applies to.
-func (b NativeObjectACE) SID() NativeSID {
+// SID defines the security identifier that the access control entry applies to.
+func (b NativeObjectACE) SID() ntsd.SID {
 	// FIXME: Determine whether the location of this member varies based on the
 	// flags.
 	//
 	// See https://msdn.microsoft.com/en-us/library/windows/desktop/aa374857
-	return NativeSID(b[44:])
+	return UnmarshalSID(b[44:])
 }
 
 // NativeSID is a byte slice wrapper that acts as a translator for the on-disk

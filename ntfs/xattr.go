@@ -22,6 +22,7 @@ func GetFileSD(filename string) (*ntsd.SecurityDescriptor, error) {
 	if err != nil {
 		return nil, err
 	}
-	sd := UnmarshalSecurityDescriptor(bytes)
+	sd := new(ntsd.SecurityDescriptor)
+	*sd = UnmarshalSecurityDescriptor(bytes)
 	return sd, nil
 }
