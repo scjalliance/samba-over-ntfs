@@ -44,14 +44,14 @@ func main() {
 	}
 
 	// TODO: Write and run NtfsValidate first?
-	sd := ntfsacl.NtfsDecodeSecurityDescriptor(sdBytes)
+	sd := ntfsacl.NTFSDecodeSecurityDescriptor(sdBytes)
 
 	if destinationFilename == nil || *destinationFilename == "" {
 		// When no destination is provided we dump the raw value to the screen
 		//fmt.Println(string(ntfsRawSecurityDescriptor))
 
 		// Write the SDDL representation of the security descriptor to the screen
-		fmt.Println(sd.Sddl())
+		fmt.Println(sd.SDDL())
 		os.Exit(0)
 	}
 
