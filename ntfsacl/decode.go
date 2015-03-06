@@ -2,9 +2,9 @@ package ntfsacl
 
 import "encoding/binary"
 
-// NtfsDecodeSecurityDescriptor reads a security descriptor from a byte slice containing data
+// NTFSDecodeSecurityDescriptor reads a security descriptor from a byte slice containing data
 // formatted according to an NTFS on-disk data layout.
-func NtfsDecodeSecurityDescriptor(b []byte) *SecurityDescriptor {
+func NTFSDecodeSecurityDescriptor(b []byte) *SecurityDescriptor {
 	n := NativeSecurityDescriptor(b)
 	d := new(SecurityDescriptor)
 	d.Revision = n.Revision()
@@ -13,37 +13,37 @@ func NtfsDecodeSecurityDescriptor(b []byte) *SecurityDescriptor {
 	if n.OwnerOffset() > 0 {
 		// FIXME: Validate SID before allocating memory?
 		// TODO: Consider moving the memory allocation to NtfsDecode.
-		d.Owner = NtfsDecodeSID(b[n.OwnerOffset():]) // FIXME: Use the correct end of the SID byte slice?
+		d.Owner = NTFSDecodeSID(b[n.OwnerOffset():]) // FIXME: Use the correct end of the SID byte slice?
 	} else {
 		d.Owner = nil
 	}
 	if n.GroupOffset() > 0 {
 		// FIXME: Validate SID before allocating memory?
 		// TODO: Consider moving the memory allocation to NtfsDecode.
-		d.Group = NtfsDecodeSID(b[n.GroupOffset():]) // FIXME: Use the correct end of the SID byte slice?
+		d.Group = NTFSDecodeSID(b[n.GroupOffset():]) // FIXME: Use the correct end of the SID byte slice?
 	} else {
 		d.Group = nil
 	}
-	if d.Control.HasFlag(SeSaclPresent) && n.SaclOffset() > 0 {
+	if d.Control.HasFlag(SACLPresent) && n.SACLOffset() > 0 {
 		// FIXME: Validate ACL before allocating memory?
 		// TODO: Consider moving the memory allocation to NtfsDecode.
-		d.Sacl = NtfsDecodeACL(b[n.SaclOffset():]) // FIXME: Use the correct end of the ACL byte slice?
+		d.SACL = NTFSDecodeACL(b[n.SACLOffset():]) // FIXME: Use the correct end of the ACL byte slice?
 	} else {
-		d.Sacl = nil
+		d.SACL = nil
 	}
-	if d.Control.HasFlag(SeDaclPresent) && n.DaclOffset() > 0 {
+	if d.Control.HasFlag(DACLPresent) && n.DACLOffset() > 0 {
 		// FIXME: Validate ACL before allocating memory?
 		// TODO: Consider moving the memory allocation to NtfsDecode.
-		d.Dacl = NtfsDecodeACL(b[n.DaclOffset():]) // FIXME: Use the correct end of the ACL byte slice?
+		d.DACL = NTFSDecodeACL(b[n.DACLOffset():]) // FIXME: Use the correct end of the ACL byte slice?
 	} else {
-		d.Dacl = nil
+		d.DACL = nil
 	}
 	return d
 }
 
-// NtfsDecodeACL reads an access control list from a byte slice containing data
+// NTFSDecodeACL reads an access control list from a byte slice containing data
 // formatted according to an NTFS on-disk data layout.
-func NtfsDecodeACL(b []byte) *ACL {
+func NTFSDecodeACL(b []byte) *ACL {
 	n := NativeACL(b)
 	acl := new(ACL)
 	acl.Revision = n.Revision()
@@ -66,18 +66,18 @@ func NtfsDecodeACL(b []byte) *ACL {
 	return acl
 }
 
-// NtfsDecodeSecurityDescriptorControl reads a security descriptor control from a byte slice containing
+// NTFSDecodeSecurityDescriptorControl reads a security descriptor control from a byte slice containing
 // data formatted according to an NTFS on-disk data layout.
 //
 // TODO: Decide whether this is redundant in light of the Control() function
 // on the NativeSecurityDescriptor type.
-func NtfsDecodeSecurityDescriptorControl(b []byte) SecurityDescriptorControl {
+func NTFSDecodeSecurityDescriptorControl(b []byte) SecurityDescriptorControl {
 	return SecurityDescriptorControl(binary.LittleEndian.Uint16(b[0:2]))
 }
 
-// NtfsDecodeSID reads a security identifier from a byte slice containing
+// NTFSDecodeSID reads a security identifier from a byte slice containing
 // data formatted according to an NTFS on-disk data layout.
-func NtfsDecodeSID(b []byte) *SID {
+func NTFSDecodeSID(b []byte) *SID {
 	n := NativeSID(b)
 	s := new(SID)
 	s.Revision = n.Revision()

@@ -37,24 +37,24 @@ func (b NativeSecurityDescriptor) GroupOffset() uint32 {
 	return binary.LittleEndian.Uint32(b[8:12])
 }
 
-// SaclOffset is a byte offset to a system ACL. It is only valid if
+// SACLOffset is a byte offset to a system ACL. It is only valid if
 // SE_SACL_PRESENT is set in the control field. If SE_SACL_PRESENT is set but
 // SaclOffset is zero, a NULL ACL is specified.
 //
 // The offset is in bytes and is relative to the start of the
 // NativeSecurityDescriptor.
-func (b NativeSecurityDescriptor) SaclOffset() uint32 {
+func (b NativeSecurityDescriptor) SACLOffset() uint32 {
 	return binary.LittleEndian.Uint32(b[12:16])
 }
 
-// DaclOffset is a byte offset to a discretionary ACL. It is only valid if
+// DACLOffset is a byte offset to a discretionary ACL. It is only valid if
 // SE_DACL_PRESENT is set in the control field. If SE_DACL_PRESENT is set but
 // DaclOffset is zero, a NULL ACL (unconditionally granting access) is
 // specified.
 //
 // The offset is in bytes and is relative to the start of the
 // NativeSecurityDescriptor.
-func (b NativeSecurityDescriptor) DaclOffset() uint32 {
+func (b NativeSecurityDescriptor) DACLOffset() uint32 {
 	return binary.LittleEndian.Uint32(b[16:20])
 }
 
@@ -88,54 +88,54 @@ func (b NativeACL) AceCount() uint16 {
 type NativeAceHeader []byte
 
 // Type of the access control entry
-func (b NativeSidAce) Type() uint8 { return b[0] }
+func (b NativeAceHeader) Type() uint8 { return b[0] }
 
 // Flags describing the access control entry
-func (b NativeSidAce) Flags() uint8 { return b[1] }
+func (b NativeAceHeader) Flags() uint8 { return b[1] }
 
 // Size in bytes of the access control entry
-func (b NativeSidAce) Size() uint16 { return binary.LittleEndian.Uint16(b[2:4]) }
+func (b NativeAceHeader) Size() uint16 { return binary.LittleEndian.Uint16(b[2:4]) }
 
-// NativeSidAce is a byte slice wrapper that acts as a translator
+// NativeSidACE is a byte slice wrapper that acts as a translator
 // for the on-disk representation of access control entries that apply to
 // security identifiers. One of its functions is to convert member values into
 // the appropriate endianness.
 //
 // This type expects byte 0 of the underlying slice to be the start of the ACE
 // header structure.
-type NativeSidAce []byte
+type NativeSidACE []byte
 
 // Mask defines the access mask of the access control entry, which encapsulates
 // the access privileges that the access control entry is specifying.
-func (b NativeSidAce) Mask() AccessMask { return AccessMask(binary.LittleEndian.Uint32(b[4:8])) }
+func (b NativeSidACE) Mask() AccessMask { return AccessMask(binary.LittleEndian.Uint32(b[4:8])) }
 
 // Sid defines the security identifier that the access control entry applies to.
-func (b NativeSidAce) Sid() NativeSID { return NativeSID(b[8:]) }
+func (b NativeSidACE) Sid() NativeSID { return NativeSID(b[8:]) }
 
-// NativeObjectAce is a byte slice wrapper that acts as a translator
+// NativeObjectACE is a byte slice wrapper that acts as a translator
 // for the on-disk representation of access control entries that apply to
 // objects identified by GUIDs. One of its functions is to convert member values
 // into the appropriate endianness.
 //
 // This type expects byte 0 of the underlying slice to be the start of the ACE
 // header structure.
-type NativeObjectAce []byte
+type NativeObjectACE []byte
 
 // Mask defines the access mask of the access control entry, which encapsulates
 // the access privileges that the access control entry is specifying.
-func (b NativeObjectAce) Mask() AccessMask { return AccessMask(binary.LittleEndian.Uint32(b[4:8])) }
+func (b NativeObjectACE) Mask() AccessMask { return AccessMask(binary.LittleEndian.Uint32(b[4:8])) }
 
 // ObjectFlags
-func (b NativeObjectAce) ObjectFlags() ObjectAceFlag {
-	return ObjectAceFlag(binary.LittleEndian.Uint32(b[8:12]))
+func (b NativeObjectACE) ObjectFlags() ObjectAccessControlFlag {
+	return ObjectAccessControlFlag(binary.LittleEndian.Uint32(b[8:12]))
 }
 
 // ObjectType
-func (b NativeObjectAce) ObjectType() NativeGUID {
+func (b NativeObjectACE) ObjectType() NativeGUID {
 	return NativeGUID(b[12:28])
 }
 
-func (b NativeObjectAce) InheritedObjectType() NativeGUID {
+func (b NativeObjectACE) InheritedObjectType() NativeGUID {
 	// FIXME: Determine whether the location of this member varies based on the
 	// flags.
 	//
@@ -144,7 +144,7 @@ func (b NativeObjectAce) InheritedObjectType() NativeGUID {
 }
 
 // Sid defines the security identifier that the access control entry applies to.
-func (b NativeObjectAce) Sid() NativeSID {
+func (b NativeObjectACE) SID() NativeSID {
 	// FIXME: Determine whether the location of this member varies based on the
 	// flags.
 	//
@@ -170,8 +170,8 @@ func (b NativeSID) SubAuthorityCount() uint8 {
 
 // IdentifierAuthority returns the identifier authority of the security
 // identifier.
-func (b NativeSID) IdentifierAuthority() SidIdentifierAuthority {
-	return SidIdentifierAuthority{b[2], b[3], b[4], b[5], b[6], b[7]} // Big endian
+func (b NativeSID) IdentifierAuthority() IdentifierAuthority {
+	return IdentifierAuthority{b[2], b[3], b[4], b[5], b[6], b[7]} // Big endian
 }
 
 // SubAuthority returns the sub authority of the given index for the security
@@ -182,8 +182,25 @@ func (b NativeSID) SubAuthority(index uint8) uint32 {
 	return binary.LittleEndian.Uint32(b[start:end])
 }
 
+// NativeGUID is a byte slice wrapper that acts as a translator for the on-disk
+// representation of globally unique identifiers. One of its functions is to
+// convert member values into the appropriate endianness.
 type NativeGUID []byte
 
+// Byte returns the byte of the GUID at the given index
+func (b NativeGUID) Byte(index uint8) byte {
+	// TODO: Verify that we have the correct byte order for these things
+	switch {
+	case index >= 8:
+		return b[index]
+	case index >= 6:
+		return b[13-index] // Swap little-endian bytes 6 and 7
+	case index >= 4:
+		return b[9-index] // Swap little-endian bytes 4 and 5
+	default:
+		return b[3-index] // Swap little-endian bytes 0 through 3
+	}
+}
+
 // TODO: Write the NativeGUID accessors
-// TODO: Figure out the correct byte order for these things
 // NOTE: A simple byte index accessor will probably suffice, i.e: guid.Byte(i)

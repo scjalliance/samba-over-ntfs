@@ -5,50 +5,50 @@ import "fmt"
 const (
 	sddlOwnerTag = "O"
 	sddlGroupTag = "G"
-	sddlDaclTag  = "D"
-	sddlSaclTag  = "S"
+	sddlDACLTag  = "D"
+	sddlSACLTag  = "S"
 )
 
-// Sddl returns a string representation of the security identifier in the format
+// SDDL returns a string representation of the security identifier in the format
 // expected by the security descriptor definition language.
-func (sd SecurityDescriptor) Sddl() string {
+func (sd SecurityDescriptor) SDDL() string {
 	output := ""
 	if sd.Owner != nil {
-		output += sddlOwnerTag + ":" + sd.Owner.Sddl()
+		output += sddlOwnerTag + ":" + sd.Owner.SDDL()
 	}
 	if sd.Group != nil {
-		output += sddlGroupTag + ":" + sd.Group.Sddl()
+		output += sddlGroupTag + ":" + sd.Group.SDDL()
 	}
-	if sd.Control.HasFlag(SeDaclPresent) {
-		output += sddlDaclTag + ":"
-		if sd.Dacl != nil {
+	if sd.Control.HasFlag(DACLPresent) {
+		output += sddlDACLTag + ":"
+		if sd.DACL != nil {
 			// TODO: Handle the relevant DACL control flags
-			output += sd.Dacl.Sddl()
+			output += sd.DACL.SDDL()
 		}
 	}
-	if sd.Control.HasFlag(SeSaclPresent) {
-		output += sddlSaclTag + ":"
-		if sd.Sacl != nil {
+	if sd.Control.HasFlag(SACLPresent) {
+		output += sddlSACLTag + ":"
+		if sd.SACL != nil {
 			// TODO: Handle the relevant SACL control flags
-			output += sd.Dacl.Sddl()
+			output += sd.SACL.SDDL()
 		}
 	}
 	return output
 }
 
-// Sddl returns a string representation of the access control list in the format
+// SDDL returns a string representation of the access control list in the format
 // expected by the security descriptor definition language.
-func (acl ACL) Sddl() string {
+func (acl ACL) SDDL() string {
 	output := ""
 	for _, entry := range acl.Entries {
-		output += entry.Sddl()
+		output += entry.SDDL()
 	}
 	return output
 }
 
-// Sddl returns a string representation of the access control entry in the
+// SDDL returns a string representation of the access control entry in the
 // format expected by the security descriptor definition language.
-func (ace ACE) Sddl() string {
+func (ace ACE) SDDL() string {
 	// TODO: Write this function
 	return ""
 }
@@ -103,15 +103,15 @@ const (
 	sddlEveryoneTag                    = "WD" // Everyone. The corresponding RID is SecurityWorldRid.
 )
 
-// Sddl returns a string representation of the security identifier in the format
+// SDDL returns a string representation of the security identifier in the format
 // expected by the security descriptor definition language. Well known values
 // will be represented by a two letter abbreviation while all other values will
 // be represented in the standard S-R-I-S notation.
-func (sid SID) Sddl() string {
+func (sid SID) SDDL() string {
 	// TODO: Return constants for all well known values
 	if sid.Revision == 1 && sid.SubAuthorityCount > 0 {
 		switch sid.IdentifierAuthority {
-		case securityWorldSidAuthority:
+		case worldIdentifierAuthority:
 			switch sid.SubAuthority[0] {
 			case SecurityWorldRid:
 				return sddlEveryoneTag
@@ -133,28 +133,29 @@ const (
 	sddlSystemAlarmObjectTag     = "AL"
 )
 
-// Sddl returns a string representation of the access control entry type in the
+// SDDL returns a string representation of the access control entry type in the
 // format expected by the security descriptor definition language.
-func (t AceType) Sddl() string {
+func (t AccessControlType) SDDL() string {
 	switch t {
-	case AccessAllowedAceType:
+	case AccessAllowedControl:
 		return sddlAccessAllowedTag
-	case AccessDeniedAceType:
+	case AccessDeniedControl:
 		return sddlAccessDeniedTag
-	case SystemAuditAceType:
+	case SystemAuditControl:
 		return sddlSystemAuditTag
-	case SystemAlarmAceType:
+	case SystemAlarmControl:
 		return sddlSystemAlarmTag
-	case AccessAllowedObjectAceType:
+	case AccessAllowedObjectControl:
 		return sddlAccessAllowedObjectTag
-	case AccessDeniedObjectAceType:
+	case AccessDeniedObjectControl:
 		return sddlAccessDeniedObjectTag
-	case SystemAuditObjectAceType:
+	case SystemAuditObjectControl:
 		return sddlSystemAuditObjectTag
-	case SystemAlarmObjectAceType:
+	case SystemAlarmObjectControl:
 		return sddlSystemAlarmObjectTag
+	default:
+		return ""
 	}
-	return ""
 }
 
 const (
@@ -167,29 +168,29 @@ const (
 	sddlFailedAccessTag       = "FA"
 )
 
-// Sddl returns a string representation of the access control entry flags in the
+// SDDL returns a string representation of the access control entry flags in the
 // format expected by the security descriptor definition language.
-func (f AceFlag) Sddl() string {
+func (f AccessControlFlag) SDDL() string {
 	s := ""
-	if f&ObjectInheritAceFlag == ObjectInheritAceFlag {
+	if f.HasFlag(ObjectInheritFlag) {
 		s += sddlObjectInheritTag
 	}
-	if f&ContainerInheritAceFlag == ContainerInheritAceFlag {
+	if f.HasFlag(ContainerInheritFlag) {
 		s += sddlContainerInheritTag
 	}
-	if f&NoPropagateInheritAceFlag == NoPropagateInheritAceFlag {
+	if f.HasFlag(NoPropagateInheritFlag) {
 		s += sddlNoPropagateInheritTag
 	}
-	if f&InheritOnlyAceFlag == InheritOnlyAceFlag {
+	if f.HasFlag(InheritOnlyFlag) {
 		s += sddlInheritOnlyTag
 	}
-	if f&InheritedAceFlag == InheritedAceFlag {
+	if f.HasFlag(InheritedFlag) {
 		s += sddlInheritedTag
 	}
-	if f&SuccessfulAccessAceFlag == SuccessfulAccessAceFlag {
+	if f.HasFlag(SuccessfulAccessFlag) {
 		s += sddlSuccessfulAccessTag
 	}
-	if f&FailedAccessAceFlag == FailedAccessAceFlag {
+	if f.HasFlag(FailedAccessFlag) {
 		s += sddlFailedAccessTag
 	}
 	return s

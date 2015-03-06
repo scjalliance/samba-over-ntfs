@@ -18,6 +18,6 @@ func GetFileSD(filename string) (*SecurityDescriptor, error) {
 	if err != nil {
 		return nil, err
 	}
-	sd := NtfsDecodeSecurityDescriptor(bytes)
+	sd := NTFSDecodeSecurityDescriptor(bytes)
 	return sd, nil
 }

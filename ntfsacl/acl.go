@@ -8,8 +8,8 @@ type SecurityDescriptor struct {
 	Control   SecurityDescriptorControl
 	Owner     *SID
 	Group     *SID
-	Sacl      *ACL
-	Dacl      *ACL
+	SACL      *ACL
+	DACL      *ACL
 }
 
 // The SID structure is a variable-length structure used to uniquely identify
@@ -39,7 +39,7 @@ type SecurityDescriptor struct {
 type SID struct {
 	Revision            uint8
 	SubAuthorityCount   uint8 // TODO: Consider removing this and just using len(SubAuthority)
-	IdentifierAuthority SidIdentifierAuthority
+	IdentifierAuthority IdentifierAuthority
 	SubAuthority        []uint32
 }
 
@@ -84,8 +84,8 @@ type ACL struct {
 }
 
 const (
-	AclMinRevision = 2
-	AclMaxRevision = 4
+	MinACLRevision = 2
+	MaxACLRevision = 4
 )
 
 // An ACE is an access-control entry in an access-control list (ACL).
@@ -94,11 +94,11 @@ const (
 // for a specific user or group. The user or group is identified by a security
 // identifier (SID).
 type ACE struct {
-	Type                AceType
-	Flags               AceFlag
+	Type                AccessControlType
+	Flags               AccessControlFlag
 	Mask                AccessMask
-	Sid                 SID
-	ObjectFlags         ObjectAceFlag
+	SID                 SID
+	ObjectFlags         ObjectAccessControlFlag
 	ObjectType          GUID
 	InheritedObjectType GUID
 }
@@ -114,20 +114,20 @@ const (
 	// original provider of the security descriptor. This may
 	// affect the treatment of the SID with respect to inheritance
 	// of an owner.
-	SeOwnerDefaulted SecurityDescriptorControl = 0x0001
+	OwnerDefaulted SecurityDescriptorControl = 0x0001
 
 	// SeGroupDefaulted is a boolean flag which, when set, indicates that the
 	// SID in the Group field was provided by a defaulting mechanism
 	// rather than explicitly provided by the original provider of
 	// the security descriptor.  This may affect the treatment of
 	// the SID with respect to inheritance of a primary group.
-	SeGroupDefaulted SecurityDescriptorControl = 0x0002
+	GroupDefaulted SecurityDescriptorControl = 0x0002
 
 	// SeDaclPresent is a boolean flag which, when set, indicates that the
 	// security descriptor contains a discretionary ACL. If this
 	// flag is set and the Dacl field of the SECURITY_DESCRIPTOR is
 	// null, then a null ACL is explicitly being specified.
-	SeDaclPresent SecurityDescriptorControl = 0x0004
+	DACLPresent SecurityDescriptorControl = 0x0004
 
 	// SeDaclDefaulted is a boolean flag which, when set, indicates that the
 	// ACL pointed to by the Dacl field was provided by a defaulting
@@ -135,14 +135,14 @@ const (
 	// provider of the security descriptor. This may affect the
 	// treatment of the ACL with respect to inheritance of an ACL.
 	// This flag is ignored if the DaclPresent flag is not set.
-	SeDaclDefaulted SecurityDescriptorControl = 0x0008
+	DACLDefaulted SecurityDescriptorControl = 0x0008
 
 	// SeSaclPresent is a boolean flag which, when set, indicates that the
 	// security descriptor contains a system ACL pointed to by the
 	// Sacl field. If this flag is set and the Sacl field of the
 	// SECURITY_DESCRIPTOR is null, then an empty (but present)
 	// ACL is being specified.
-	SeSaclPresent SecurityDescriptorControl = 0x0010
+	SACLPresent SecurityDescriptorControl = 0x0010
 
 	// SeSaclDefaulted is a boolean flag which, when set, indicates that the
 	// ACL pointed to by the Sacl field was provided by a defaulting
@@ -150,31 +150,33 @@ const (
 	// provider of the security descriptor. This may affect the
 	// treatment of the ACL with respect to inheritance of an ACL.
 	// This flag is ignored if the SaclPresent flag is not set.
-	SeSaclDefaulted SecurityDescriptorControl = 0x0020
+	SACLDefaulted SecurityDescriptorControl = 0x0020
 
-	SeDaclAutoInheritReq SecurityDescriptorControl = 0x0100
-	SeSaclAutoInheritReq SecurityDescriptorControl = 0x0200
-	SeDaclAutoInherited  SecurityDescriptorControl = 0x0400
-	SeSaclAutoInherited  SecurityDescriptorControl = 0x0800
-	SeDaclProtected      SecurityDescriptorControl = 0x1000
-	SeSaclProtected      SecurityDescriptorControl = 0x2000
-	SeRmControlValid     SecurityDescriptorControl = 0x4000
+	DACLAutoInheritReq SecurityDescriptorControl = 0x0100
+	SACLAutoInheritReq SecurityDescriptorControl = 0x0200
+	DACLAutoInherited  SecurityDescriptorControl = 0x0400
+	SACLAutoInherited  SecurityDescriptorControl = 0x0800
+	DACLProtected      SecurityDescriptorControl = 0x1000
+	SACLProtected      SecurityDescriptorControl = 0x2000
+	RmControlValid     SecurityDescriptorControl = 0x4000
 
 	// SeSelfRelative is a boolean flag which, when set, indicates that the
 	// security descriptor is in self-relative form.  In this form,
 	// all fields of the security descriptor are contiguous in memory
 	// and all pointer fields are expressed as offsets from the
 	// beginning of the security descriptor.
-	SeSelfRelative SecurityDescriptorControl = 0x8000
+	SelfRelative SecurityDescriptorControl = 0x8000
 )
 
-func (control SecurityDescriptorControl) HasFlag(flag SecurityDescriptorControl) bool {
-	return control|flag == control
+// HasFlag returns true if the security descriptor control contains the given
+// flag, otherwise it returns false.
+func (value SecurityDescriptorControl) HasFlag(flag SecurityDescriptorControl) bool {
+	return value&flag == flag
 }
 
-type SidIdentifierAuthority [6]uint8
+type IdentifierAuthority [6]uint8
 
-func (b SidIdentifierAuthority) Uint64() uint64 {
+func (b IdentifierAuthority) Uint64() uint64 {
 	return uint64(b[0])<<38 | uint64(b[1])<<30 | uint64(b[2])<<24 | uint64(b[3])<<16 | uint64(b[4])<<8 | uint64(b[5])
 }
 
@@ -186,110 +188,104 @@ var (
 )
 
 var (
-	securityNullSidAuthority    = SidIdentifierAuthority{0, 0, 0, 0, 0, 0} // S-1-0
-	securityWorldSidAuthority   = SidIdentifierAuthority{0, 0, 0, 0, 0, 1} // S-1-1
-	securityLocalSidAuthority   = SidIdentifierAuthority{0, 0, 0, 0, 0, 2} // S-1-2
-	securityCreatorSidAuthority = SidIdentifierAuthority{0, 0, 0, 0, 0, 3} // S-1-3
-	securityNonUniqueAuthority  = SidIdentifierAuthority{0, 0, 0, 0, 0, 4} // S-1-4
-	securityNtSidAuthority      = SidIdentifierAuthority{0, 0, 0, 0, 0, 5} // S-1-5
+	nullIdentifierAuthority      = IdentifierAuthority{0, 0, 0, 0, 0, 0} // S-1-0
+	worldIdentifierAuthority     = IdentifierAuthority{0, 0, 0, 0, 0, 1} // S-1-1
+	localIdentifierAuthority     = IdentifierAuthority{0, 0, 0, 0, 0, 2} // S-1-2
+	creatorIdentifierAuthority   = IdentifierAuthority{0, 0, 0, 0, 0, 3} // S-1-3
+	nonUniqueIdentifierAuthority = IdentifierAuthority{0, 0, 0, 0, 0, 4} // S-1-4
+	ntIdentifierAuthority        = IdentifierAuthority{0, 0, 0, 0, 0, 5} // S-1-5
 )
 
-// SecurityNullSidAuthority represents SID S-1-0
-func SecurityNullSidAuthority() SidIdentifierAuthority {
-	return SidIdentifierAuthority{0, 0, 0, 0, 0, 0}
+// NullIdentifierAuthority represents SID S-1-0
+func NullIdentifierAuthority() IdentifierAuthority {
+	return IdentifierAuthority{0, 0, 0, 0, 0, 0}
 }
 
-// SecurityWorldSidAuthority represents SID S-1-1
-func SecurityWorldSidAuthority() SidIdentifierAuthority {
-	return SidIdentifierAuthority{0, 0, 0, 0, 0, 1}
+// WorldIdentifierAuthority represents SID S-1-1
+func WorldIdentifierAuthority() IdentifierAuthority {
+	return IdentifierAuthority{0, 0, 0, 0, 0, 1}
 }
 
-// SecurityLocalSidAuthority represents SID S-1-2
-func SecurityLocalSidAuthority() SidIdentifierAuthority {
-	return SidIdentifierAuthority{0, 0, 0, 0, 0, 2}
+// LocalIdentifierAuthority represents SID S-1-2
+func LocalIdentifierAuthority() IdentifierAuthority {
+	return IdentifierAuthority{0, 0, 0, 0, 0, 2}
 }
 
-// SecurityCreatorSidAuthority represents SID S-1-3
-func SecurityCreatorSidAuthority() SidIdentifierAuthority {
-	return SidIdentifierAuthority{0, 0, 0, 0, 0, 3}
+// CreatorIdentifierAuthority represents SID S-1-3
+func CreatorIdentifierAuthority() IdentifierAuthority {
+	return IdentifierAuthority{0, 0, 0, 0, 0, 3}
 }
 
-// SecurityNonUniqueAuthority represents SID S-1-4
-func SecurityNonUniqueAuthority() SidIdentifierAuthority {
-	return SidIdentifierAuthority{0, 0, 0, 0, 0, 4}
+// NonUniqueAuthority represents SID S-1-4
+func NonUniqueAuthority() IdentifierAuthority {
+	return IdentifierAuthority{0, 0, 0, 0, 0, 4}
 }
 
-// SecurityNtSidAuthority represents SID S-1-5
-func SecurityNtSidAuthority() SidIdentifierAuthority {
-	return SidIdentifierAuthority{0, 0, 0, 0, 0, 5}
+// NTIdentifierAuthority represents SID S-1-5
+func NTIdentifierAuthority() IdentifierAuthority {
+	return IdentifierAuthority{0, 0, 0, 0, 0, 5}
 }
 
-// AceType specifies the type of an access control entry and determines the data
-// structure used to represent it
-type AceType uint8
+// AcessControlType specifies the type of an access control entry and determines
+// the data structure used to represent it
+type AccessControlType uint8
 
 const (
-	// FIXME: These constants are a mess and need to be cleaned up somehow
-
-	AccessMinMsAceType AceType = 0
-
-	// AccessAllowedAceType specifies an access control entry granting access to
+	// AccessAllowedControl specifies an access control entry granting access to
 	// a particular trustee, which is in the form of a SID. It is only used in
 	// Discretionary ACLs.
 	//
 	// A data structure of AccessAllowedAce represents this type of ACE.
-	AccessAllowedAceType AceType = 0
+	AccessAllowedControl AccessControlType = 0
 
-	// AccessDeniedAceType specifies an access control entry denying access to
+	// AccessDeniedControl specifies an access control entry denying access to
 	// a particular trustee, which is in the form of a SID. It is only used in
 	// Discretionary ACLs.
 	//
 	// A data structure of AccessDeniedAce represents this type of ACE.
-	AccessDeniedAceType AceType = 1
+	AccessDeniedControl AccessControlType = 1
 
-	// SystemAuditAceType is not supported as it became obsolete as of Win2k
-	SystemAuditAceType   AceType = 2
-	SystemAlarmAceType   AceType = 3 /* Not implemented as of Win2k. */
-	AccessMaxMsV2AceType AceType = 3
+	// SystemAuditControl is not supported as it became obsolete as of Win2k
+	SystemAuditControl AccessControlType = 2
+	SystemAlarmControl AccessControlType = 3 /* Not implemented as of Win2k. */
 
-	AccessAllowedCompoundAceType AceType = 4
-	AccessMaxMsV3AceType         AceType = 4
+	AccessAllowedCompoundControl AccessControlType = 4
 
 	/* The following are Win2k only. */
-	AccessMinMsObjectAceType   AceType = 5
-	AccessAllowedObjectAceType AceType = 5
-	AccessDeniedObjectAceType  AceType = 6
-	SystemAuditObjectAceType   AceType = 7
-	SystemAlarmObjectAceType   AceType = 8
-	AccessMaxMsObjectAceType   AceType = 8
-
-	AccessMaxMsV4AceType AceType = 8
-
-	/* This one is for WinNT&2k. */
-	AccessMaxMsAceType = 8
+	AccessAllowedObjectControl AccessControlType = 5
+	AccessDeniedObjectControl  AccessControlType = 6
+	SystemAuditObjectControl   AccessControlType = 7
+	SystemAlarmObjectControl   AccessControlType = 8
+	AccessMaxMsObjectControl   AccessControlType = 8
 )
 
-type AceFlag uint8
+type AccessControlFlag uint8
+
+// HasFlag returns true if the access control contains the given flag,
+// otherwise it returns false.
+func (value AccessControlFlag) HasFlag(flag AccessControlFlag) bool {
+	return value&flag == flag
+}
 
 const (
 	/* The inheritance flags. */
-	ObjectInheritAceFlag      AceFlag = 0x01
-	ContainerInheritAceFlag   AceFlag = 0x02
-	NoPropagateInheritAceFlag AceFlag = 0x04
-	InheritOnlyAceFlag        AceFlag = 0x08
-	InheritedAceFlag          AceFlag = 0x10 /* Win2k only. */
-	ValidInheritAceFlags      AceFlag = 0x1f
+	ObjectInheritFlag      AccessControlFlag = 0x01
+	ContainerInheritFlag   AccessControlFlag = 0x02
+	NoPropagateInheritFlag AccessControlFlag = 0x04
+	InheritOnlyFlag        AccessControlFlag = 0x08
+	InheritedFlag          AccessControlFlag = 0x10 /* Win2k only. */
+	ValidInheritanceFlags  AccessControlFlag = 0x1f
 
 	/* The audit flags. */
-	SuccessfulAccessAceFlag AceFlag = 0x40
-	FailedAccessAceFlag     AceFlag = 0x80
+	SuccessfulAccessFlag AccessControlFlag = 0x40
+	FailedAccessFlag     AccessControlFlag = 0x80
 )
 
-type ObjectAceFlag uint32
+type ObjectAccessControlFlag uint32
 
 const (
-	AceObjectTypePresent          = 1
-	AceInheritedObjectTypePresent = 2
+	ObjectTypePresent          = 1
+	InheritedObjectTypePresent = 2
 )
 
 type AccessMask uint32
