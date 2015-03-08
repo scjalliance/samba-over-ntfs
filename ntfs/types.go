@@ -23,8 +23,8 @@ func (b NativeSecurityDescriptor) Control() ntsd.SecurityDescriptorControl {
 	return ntsd.SecurityDescriptorControl(binary.LittleEndian.Uint16(b[2:4]))
 }
 
-// OwnerOffset is a byte offset to a SID representing an object's owner. If this
-// is NULL, no owner SID is present in the descriptor.
+// OwnerOffset is an offset to a SID representing the object's owner. If this
+// is zero, no owner SID is present in the descriptor.
 //
 // The offset is in bytes and is relative to the start of the
 // NativeSecurityDescriptor.
@@ -32,8 +32,8 @@ func (b NativeSecurityDescriptor) OwnerOffset() uint32 {
 	return binary.LittleEndian.Uint32(b[4:8])
 }
 
-// GroupOffset is a byte offset to a SID representing an object's owner. If this
-// is NULL, no owner SID is present in the descriptor.
+// GroupOffset is an offset to a SID representing the object's owner. If this
+// is zero, no owner SID is present in the descriptor.
 //
 // The offset is in bytes and is relative to the start of the
 // NativeSecurityDescriptor.
@@ -41,7 +41,7 @@ func (b NativeSecurityDescriptor) GroupOffset() uint32 {
 	return binary.LittleEndian.Uint32(b[8:12])
 }
 
-// SACLOffset is a byte offset to a system ACL. It is only valid if
+// SACLOffset is an offset to a system ACL. It is only valid if
 // SE_SACL_PRESENT is set in the control field. If SE_SACL_PRESENT is set but
 // SaclOffset is zero, a NULL ACL is specified.
 //
@@ -51,7 +51,7 @@ func (b NativeSecurityDescriptor) SACLOffset() uint32 {
 	return binary.LittleEndian.Uint32(b[12:16])
 }
 
-// DACLOffset is a byte offset to a discretionary ACL. It is only valid if
+// DACLOffset is an offset to a discretionary ACL. It is only valid if
 // SE_DACL_PRESENT is set in the control field. If SE_DACL_PRESENT is set but
 // DaclOffset is zero, a NULL ACL (unconditionally granting access) is
 // specified.

@@ -62,7 +62,7 @@ func main() {
 		log.Fatal("Unable to access destination file: ", err)
 	}
 
-	// if err := sambaacl.Write(*destinationFilename, sdBytes); err != nil {
+	// if err := samba.Write(*destinationFilename, sdBytes); err != nil {
 	// 	log.Fatal(err)
 	// }
 }

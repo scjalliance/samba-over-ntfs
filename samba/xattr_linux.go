@@ -1,25 +1,6 @@
-// Package sambaacl is intended as the Samba-side of the ACL equation.
-package sambaacl
+package samba
 
-import (
-	"sync"
-	"syscall"
-)
-
-var aclXattrLock sync.RWMutex
-var aclXattr = "security.NTACL"
-
-const (
-	xattrReplace int = iota
-	xattrCreate
-)
-
-// SetXattr will override the default "security.NTACL" for dev/test purposes
-func SetXattr(xattr string) {
-	aclXattrLock.Lock()
-	defer aclXattrLock.Unlock()
-	aclXattr = xattr
-}
+import "syscall"
 
 // Read will return the raw NTFS-stored ACL for the requested file
 func Read(filename string) (out []byte, err error) {

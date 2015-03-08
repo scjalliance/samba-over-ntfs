@@ -7,7 +7,7 @@ import (
 
 type SecurityDescriptor struct {
 	Revision  uint8
-	Alignment uint8
+	Alignment uint8 // This contains the access control manager bits when RmControlValid is set
 	Control   SecurityDescriptorControl
 	Owner     *SID
 	Group     *SID
