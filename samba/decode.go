@@ -35,7 +35,7 @@ func UnmarshalSecurityDescriptorHashV4(b []byte) ntsd.SecurityDescriptor {
 
 // UnmarshalSecurityDescriptorHashV3 reads a security descriptor from a byte
 // slice containing security descriptor and hash data formatted according to a
-// Samba NDR data layout version 4.
+// Samba NDR data layout version 3.
 func UnmarshalSecurityDescriptorHashV3(b []byte) ntsd.SecurityDescriptor {
 	// TODO: Write this code or drop support
 	return ntsd.SecurityDescriptor{}
@@ -43,7 +43,7 @@ func UnmarshalSecurityDescriptorHashV3(b []byte) ntsd.SecurityDescriptor {
 
 // UnmarshalSecurityDescriptorHashV2 reads a security descriptor from a byte
 // slice containing security descriptor and hash data formatted according to a
-// Samba NDR data layout version 4.
+// Samba NDR data layout version 2.
 func UnmarshalSecurityDescriptorHashV2(b []byte) ntsd.SecurityDescriptor {
 	// TODO: Write this code or drop support
 	return ntsd.SecurityDescriptor{}

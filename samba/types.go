@@ -129,6 +129,7 @@ func (b NativeSecurityDescriptorHashV4) Time() uint64 {
 // The offset is in bytes and is relative to the start of the
 // NativeSecurityDescriptorHashV4.
 func (b NativeSecurityDescriptorHashV4) SecurityDescriptorOffset() uint32 {
+	// TODO: Make sure byte alignment rules don't bite us here
 	return b.TimeOffset() + 8 + 64 // 8 byte NTTIME + 64 byte hash
 }
 
