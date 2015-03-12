@@ -1,12 +1,17 @@
 package main
 
 import (
+	"encoding/base64"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"go.scj.io/samba-over-ntfs/ntfs"
+	"go.scj.io/samba-over-ntfs/ntsd"
+	"go.scj.io/samba-over-ntfs/samba"
 )
 
 // Example of system.ntfs_acl value (don't include line breaks):
@@ -15,54 +20,180 @@ import (
 //  AAAAUVAAAACRQ/QoLhMxrMaCWD8QQAAAEFAAAAAAAFFQAAADf5NuUwJ3lK/OGG+8cKAAABBQAAAA
 //  AABRUAAAA3+TblMCd5SvzhhvsBAgAA"
 
-var sourceFilename = flag.String("from", "", "File to read NTFS ACL")
-var destinationFilename = flag.String("to", "", "File to write Samba ACL (no write if omitted)")
+const (
+	modeSamba = "samba"
+	modeNTFS  = "ntfs"
+	modeSDDL  = "sddl"
+)
+
+const (
+	encBase64 = "b64"
+	encHex    = "hex"
+)
+
+var (
+	sourceFilename      string
+	destinationFilename string
+	value               string
+	inputMode           string
+	outputMode          string
+	encoding            string
+)
+
+const (
+	sourceFilenameUsage      = "File to read ACL source data from"
+	destinationFilenameUsage = "File to write ACL output data to (outputs to stdout if omitted)"
+	valueUsage               = "Value to be used as ACL source data"
+	inputModeUsage           = "Format of input data (samba, ntfs, sddl)"
+	outputModeUsage          = "Format of output data (samba, ntfs, sddl)"
+	encodingUsage            = "Encoding of output data (b64, hex)"
+	shorthand                = " (shorthand)"
+	usage                    = `Usage of acl.exe:
+  -v, -value:          Value to be used as ACL attribute data
+  -f, -from:           File to read ACL attribute from
+  -i, -in, -input:     Format of input data (samba, ntfs, sddl)
+  -o, -out, -output:   Format of output data (samba, ntfs, sddl)
+  -t, -to:             File to write ACL attribute to (stdout if omitted)
+  -e, -enc, -encoding: Encoding of output data (b64 [default], hex)`
+)
+
+func init() {
+	flag.StringVar(&sourceFilename, "from", "", sourceFilenameUsage)
+	flag.StringVar(&sourceFilename, "f", "", sourceFilenameUsage+shorthand)
+	flag.StringVar(&destinationFilename, "to", "", destinationFilenameUsage)
+	flag.StringVar(&destinationFilename, "t", "", destinationFilenameUsage+shorthand)
+	flag.StringVar(&value, "value", "", valueUsage)
+	flag.StringVar(&value, "v", "", valueUsage+shorthand)
+	flag.StringVar(&inputMode, "input", "", inputModeUsage)
+	flag.StringVar(&inputMode, "in", "", inputModeUsage+shorthand)
+	flag.StringVar(&inputMode, "i", "", inputModeUsage+shorthand)
+	flag.StringVar(&outputMode, "output", "", outputModeUsage)
+	flag.StringVar(&outputMode, "out", "", outputModeUsage+shorthand)
+	flag.StringVar(&outputMode, "o", "", outputModeUsage+shorthand)
+	flag.StringVar(&encoding, "encoding", "", encodingUsage)
+	flag.StringVar(&encoding, "enc", "", encodingUsage+shorthand)
+	flag.StringVar(&encoding, "e", "", encodingUsage+shorthand)
+}
 
 func main() {
 	flag.Parse()
 
-	// FIXME: this is only for initial build so you can test this on a non-NTFS filesystem (otherwise remove entirely)
-	ntfs.SetFileSDAttrName("user.ntfs_acl")
-	// FIXME: this is only for initial build so you can test this without superuser (otherwise remove entirely)
-	//sambaacl.SetXattr("user.NTACL")
+	// Perform case insensitive flag matching for these values
+	inputMode = strings.ToLower(inputMode)
+	outputMode = strings.ToLower(outputMode)
+	encoding = strings.ToLower(encoding)
 
-	if sourceFilename == nil || *sourceFilename == "" {
-		flag.Usage()
+	// Step 1: Grab the raw security descriptor bytes
+	var (
+		sdBytes []byte
+		err     error
+	)
+
+	switch {
+	case value != "":
+		if sourceFilename != "" {
+			fmt.Println("Cannot specify both source filename and source value")
+			fmt.Print(usage)
+			os.Exit(1)
+		}
+		switch inputMode {
+		case modeNTFS, modeSamba:
+			// Autodetect encoding for these input modes
+			sdBytes, err = base64.StdEncoding.DecodeString(value)
+			if err != nil {
+				sdBytes, err = hex.DecodeString(value)
+				if err != nil {
+					fmt.Println("Input value must be encoded in hexadecimal or base64")
+					os.Exit(1)
+				}
+			}
+		case modeSDDL:
+			fmt.Println("SDDL input mode is not yet supported")
+			os.Exit(1)
+		default:
+			fmt.Println("Invalid input mode")
+			fmt.Print(usage)
+			os.Exit(1)
+		}
+	case sourceFilename != "":
+		if _, err := os.Stat(sourceFilename); err != nil {
+			if os.IsNotExist(err) {
+				log.Fatal(err)
+			}
+			log.Fatal("Unable to access source file: ", err)
+		}
+		switch inputMode {
+		case modeNTFS:
+			// FIXME: this is only for initial build so you can test this on a non-NTFS filesystem (otherwise remove entirely)
+			ntfs.SetFileSDAttrName("user.ntfs_acl")
+			sdBytes, err = ntfs.GetFileRawSD(sourceFilename)
+			if err != nil {
+				log.Fatal(err)
+			}
+		case modeSamba:
+			// FIXME: this is only for initial build so you can test this without superuser (otherwise remove entirely)
+			//samba.SetXattr("user.NTACL")
+			fmt.Println("Samba input mode is not yet supported")
+			os.Exit(1)
+		case modeSDDL:
+			fmt.Println("Invalid source mode while reading input from file attributes")
+			fmt.Print(usage)
+			os.Exit(1)
+		}
+	default:
+		fmt.Print(usage)
 		os.Exit(1)
 	}
 
-	if _, err := os.Stat(*sourceFilename); err != nil {
-		if os.IsNotExist(err) {
-			log.Fatal(err)
+	// Step 2: Parse the input bytes
+	var sd ntsd.SecurityDescriptor
+
+	switch inputMode {
+	case modeNTFS:
+		sd = ntfs.UnmarshalSecurityDescriptor(sdBytes)
+	case modeSamba:
+		sd = samba.UnmarshalSecurityDescriptor(sdBytes)
+	case modeSDDL:
+		log.Fatal("SDDL parsing has not been implemented yet")
+	}
+
+	// Step 3a: Write the output to the destination file
+	if destinationFilename != "" {
+		if _, err = os.Stat(destinationFilename); err != nil {
+			if os.IsNotExist(err) {
+				log.Fatal(err)
+			}
+			log.Fatal("Unable to access destination file: ", err)
 		}
-		log.Fatal("Unable to access source file: ", err)
+		switch outputMode {
+		case modeSDDL:
+			fmt.Println("Invalid destination mode while writing output to file attributes")
+			fmt.Print(usage)
+			os.Exit(1)
+		default:
+			fmt.Println("Writing to a destination filename is not yet supported.")
+			os.Exit(1)
+			// if err := samba.Write(*destinationFilename, sdBytes); err != nil {
+			// 	log.Fatal(err)
+			// }
+		}
 	}
 
-	sdBytes, err := ntfs.GetFileRawSD(*sourceFilename)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// TODO: Write and run NtfsValidate first?
-	sd := ntfs.UnmarshalSecurityDescriptor(sdBytes)
-
-	if destinationFilename == nil || *destinationFilename == "" {
-		// When no destination is provided we dump the raw value to the screen
-		//fmt.Println(string(ntfsRawSecurityDescriptor))
-
+	// Step 3a: Write the output to stdout
+	switch outputMode {
+	case modeSDDL:
 		// Write the SDDL representation of the security descriptor to the screen
 		fmt.Println(sd.SDDL())
 		os.Exit(0)
+	case modeNTFS:
+		fmt.Println("NTFS formatted output is not yet supported")
+		os.Exit(1)
+	case modeSamba:
+		fmt.Println("Samba formatted output is not yet supported")
+		os.Exit(1)
+	default:
+		fmt.Println("Invalid output mode")
+		fmt.Print(usage)
+		os.Exit(1)
 	}
-
-	if _, err := os.Stat(*destinationFilename); err != nil {
-		if os.IsNotExist(err) {
-			log.Fatal(err)
-		}
-		log.Fatal("Unable to access destination file: ", err)
-	}
-
-	// if err := samba.Write(*destinationFilename, sdBytes); err != nil {
-	// 	log.Fatal(err)
-	// }
 }
