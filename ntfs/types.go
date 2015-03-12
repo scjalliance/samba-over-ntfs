@@ -218,6 +218,3 @@ func (b NativeGUID) Byte(index uint8) byte {
 		return b[3-index] // Swap little-endian bytes 0 through 3
 	}
 }
-
-// TODO: Write the NativeGUID accessors
-// NOTE: A simple byte index accessor will probably suffice, i.e: guid.Byte(i)

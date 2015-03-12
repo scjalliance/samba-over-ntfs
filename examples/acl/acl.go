@@ -152,7 +152,7 @@ func main() {
 	case modeNTFS:
 		sd = ntfs.UnmarshalSecurityDescriptor(sdBytes)
 	case modeSamba:
-		sd = samba.UnmarshalSecurityDescriptor(sdBytes)
+		sd = samba.UnmarshalXAttr(sdBytes)
 	case modeSDDL:
 		log.Fatal("SDDL parsing has not been implemented yet")
 	}

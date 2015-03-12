@@ -287,9 +287,15 @@ const (
 type ObjectAccessControlFlag uint32
 
 const (
-	ObjectTypePresent          = 1
-	InheritedObjectTypePresent = 2
+	ObjectTypePresent          ObjectAccessControlFlag = 1
+	InheritedObjectTypePresent ObjectAccessControlFlag = 2
 )
+
+// HasFlag returns true if the object access control contains the given
+// flag, otherwise it returns false.
+func (value ObjectAccessControlFlag) HasFlag(flag ObjectAccessControlFlag) bool {
+	return value&flag == flag
+}
 
 type AccessMask uint32
 
