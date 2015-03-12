@@ -1,19 +1,27 @@
-// Package sambaacl is intended as the Samba-side of the ACL equation.
+// Package samba is intended as the Samba-side of the ACL equation.
 package samba
 
-import "sync"
+import (
+	"log"
 
-var aclXattrLock sync.RWMutex
-var aclXattr = "security.NTACL"
-
-const (
-	xattrReplace int = iota
-	xattrCreate
+	"go.scj.io/samba-over-ntfs/ntsd"
 )
 
-// SetXattr will override the default "security.NTACL" for dev/test purposes
-func SetXattr(xattr string) {
-	aclXattrLock.Lock()
-	defer aclXattrLock.Unlock()
-	aclXattr = xattr
+// ReadFileSD will return the security descriptor for the requested file
+func ReadFileSD(filename string) (*ntsd.SecurityDescriptor, error) {
+	bytes, err := ReadFileRawSD(filename)
+	if err != nil {
+		return nil, err
+	}
+	sd := new(ntsd.SecurityDescriptor)
+	*sd = UnmarshalXAttr(bytes)
+	return sd, nil
+}
+
+// WriteFileSD will write the given security descriptor to the specified file
+func WriteFileSD(filename string, sd *ntsd.SecurityDescriptor) error {
+	// TODO: Write this function
+	//return WriteFileRawSD(filename, AttributeName)
+	log.Fatal("Writing to files is not yet supported")
+	return nil
 }

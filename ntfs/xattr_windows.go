@@ -1,12 +1,20 @@
 package ntfs
 
-import "encoding/base64"
+import "log"
 
-// GetFileRawSD will return the raw security descriptor bytes for the requested
+// ReadFileRawSD will return the raw security descriptor bytes for the requested
 // file
-func GetFileRawSD(filename string) ([]byte, error) {
+func ReadFileRawSD(filename string) ([]byte, error) {
 	// FIXME: Retrieve the actual bytes via new syscall wrappers
-	return base64.StdEncoding.DecodeString("AQAEhIgAAACkAAAAAAAAABQAAAACAHQAAwAAAAAQJAD/AR8AAQUAAAAAAAUVAAAACRQ/QoLhMxrMaCWD7wQAAAAQJAC/ARMAAQUAAAAAAAUVAAAACRQ/QoLhMxrMaCWD8AQAAAAQJACpABIAAQUAAAAAAAUVAAAACRQ/QoLhMxrMaCWD8QQAAAEFAAAAAAAFFQAAADf5NuUwJ3lK/OGG+8cKAAABBQAAAAAABRUAAAA3+TblMCd5SvzhhvsBAgAA")
+	log.Fatal("Reading security descriptors on Windows is not yet supported.")
+	return nil, nil
+}
+
+// ReadFileAttribute will return the bytes in the given attribute for the requested
+// file
+func ReadFileAttribute(path string, attr string) ([]byte, error) {
+	log.Fatal("Reading file attributes on Windows is not supported.")
+	return nil, nil
 }
 
 /*

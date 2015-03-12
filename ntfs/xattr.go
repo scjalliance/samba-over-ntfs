@@ -1,28 +1,26 @@
 package ntfs
 
 import (
-	"sync"
+	"log"
 
 	"go.scj.io/samba-over-ntfs/ntsd"
 )
 
-var aclXattrLock sync.RWMutex
-var aclXattr = "system.ntfs_acl"
-
-// SetFileSDAttrName will override the default "system.ntfs_acl" for dev/test purposes
-func SetFileSDAttrName(xattr string) {
-	aclXattrLock.Lock()
-	defer aclXattrLock.Unlock()
-	aclXattr = xattr
-}
-
-// GetFileSD will return the security descriptor for the requested file
-func GetFileSD(filename string) (*ntsd.SecurityDescriptor, error) {
-	bytes, err := GetFileRawSD(filename)
+// ReadFileSD will return the security descriptor for the requested file
+func ReadFileSD(filename string) (*ntsd.SecurityDescriptor, error) {
+	bytes, err := ReadFileRawSD(filename)
 	if err != nil {
 		return nil, err
 	}
 	sd := new(ntsd.SecurityDescriptor)
 	*sd = UnmarshalSecurityDescriptor(bytes)
 	return sd, nil
+}
+
+// WriteFileSD will write the given security descriptor to the specified file
+func WriteFileSD(filename string, sd *ntsd.SecurityDescriptor) error {
+	// TODO: Write this function
+	//return WriteFileRawSD(filename, AttributeName)
+	log.Fatal("Writing to files is not yet supported")
+	return nil
 }

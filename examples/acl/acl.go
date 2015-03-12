@@ -32,38 +32,46 @@ const (
 )
 
 var (
-	sourceFilename      string
-	destinationFilename string
-	value               string
-	inputMode           string
-	outputMode          string
-	encoding            string
+	sourceFilename       string
+	destinationFilename  string
+	sourceAttribute      string
+	destinationAttribute string
+	value                string
+	inputMode            string
+	outputMode           string
+	encoding             string
 )
 
 const (
-	sourceFilenameUsage      = "File to read ACL source data from"
-	destinationFilenameUsage = "File to write ACL output data to (outputs to stdout if omitted)"
-	valueUsage               = "Value to be used as ACL source data"
-	inputModeUsage           = "Format of input data (samba, ntfs, sddl)"
-	outputModeUsage          = "Format of output data (samba, ntfs, sddl)"
-	encodingUsage            = "Encoding of output data (b64, hex)"
-	shorthand                = " (shorthand)"
-	usage                    = `Usage of acl.exe:
+	valueUsage                = "Value to be used as ACL source data"
+	sourceFilenameUsage       = "File to read ACL source data from"
+	destinationFilenameUsage  = "File to write ACL output data to (outputs to stdout if omitted)"
+	sourceAttributeUsage      = "Name of extended attribute in source file"
+	destinationAttributeUsage = "Name of extended attribute in destination file"
+	inputModeUsage            = "Format of input data (samba, ntfs, sddl)"
+	outputModeUsage           = "Format of output data (samba, ntfs, sddl)"
+	encodingUsage             = "Encoding of output data (b64, hex)"
+	shorthand                 = " (shorthand)"
+	usage                     = `Usage of acl.exe:
   -v, -value:          Value to be used as ACL attribute data
   -f, -from:           File to read ACL attribute from
+  -t, -to:             File to write ACL attribute to (stdout if omitted)
+  -sa:                 Name of extended attribute in source file
+  -da:                 Name of extended attribute in destination file
   -i, -in, -input:     Format of input data (samba, ntfs, sddl)
   -o, -out, -output:   Format of output data (samba, ntfs, sddl)
-  -t, -to:             File to write ACL attribute to (stdout if omitted)
   -e, -enc, -encoding: Encoding of output data (b64 [default], hex)`
 )
 
 func init() {
+	flag.StringVar(&value, "value", "", valueUsage)
+	flag.StringVar(&value, "v", "", valueUsage+shorthand)
 	flag.StringVar(&sourceFilename, "from", "", sourceFilenameUsage)
 	flag.StringVar(&sourceFilename, "f", "", sourceFilenameUsage+shorthand)
 	flag.StringVar(&destinationFilename, "to", "", destinationFilenameUsage)
 	flag.StringVar(&destinationFilename, "t", "", destinationFilenameUsage+shorthand)
-	flag.StringVar(&value, "value", "", valueUsage)
-	flag.StringVar(&value, "v", "", valueUsage+shorthand)
+	flag.StringVar(&sourceAttribute, "sa", "", sourceAttributeUsage)
+	flag.StringVar(&destinationAttribute, "da", "", destinationAttributeUsage)
 	flag.StringVar(&inputMode, "input", "", inputModeUsage)
 	flag.StringVar(&inputMode, "in", "", inputModeUsage+shorthand)
 	flag.StringVar(&inputMode, "i", "", inputModeUsage+shorthand)
@@ -124,19 +132,27 @@ func main() {
 		}
 		switch inputMode {
 		case modeNTFS:
-			// FIXME: this is only for initial build so you can test this on a non-NTFS filesystem (otherwise remove entirely)
-			ntfs.SetFileSDAttrName("user.ntfs_acl")
-			sdBytes, err = ntfs.GetFileRawSD(sourceFilename)
+			if sourceAttribute == "" {
+				sdBytes, err = ntfs.ReadFileRawSD(sourceFilename)
+			} else {
+				sdBytes, err = ntfs.ReadFileAttribute(sourceFilename, sourceAttribute)
+			}
 			if err != nil {
 				log.Fatal(err)
 			}
 		case modeSamba:
-			// FIXME: this is only for initial build so you can test this without superuser (otherwise remove entirely)
-			//samba.SetXattr("user.NTACL")
-			fmt.Println("Samba input mode is not yet supported")
+			if sourceAttribute == "" {
+				sdBytes, err = samba.ReadFileRawSD(sourceFilename)
+			} else {
+				sdBytes, err = samba.ReadFileAttribute(sourceFilename, sourceAttribute)
+			}
 			os.Exit(1)
 		case modeSDDL:
 			fmt.Println("Invalid source mode while reading input from file attributes")
+			fmt.Println(usage)
+			os.Exit(1)
+		default:
+			fmt.Println("Invalid input mode")
 			fmt.Println(usage)
 			os.Exit(1)
 		}
