@@ -93,7 +93,7 @@ func main() {
 	case value != "":
 		if sourceFilename != "" {
 			fmt.Println("Cannot specify both source filename and source value")
-			fmt.Print(usage)
+			fmt.Println(usage)
 			os.Exit(1)
 		}
 		switch inputMode {
@@ -112,7 +112,7 @@ func main() {
 			os.Exit(1)
 		default:
 			fmt.Println("Invalid input mode")
-			fmt.Print(usage)
+			fmt.Println(usage)
 			os.Exit(1)
 		}
 	case sourceFilename != "":
@@ -137,11 +137,11 @@ func main() {
 			os.Exit(1)
 		case modeSDDL:
 			fmt.Println("Invalid source mode while reading input from file attributes")
-			fmt.Print(usage)
+			fmt.Println(usage)
 			os.Exit(1)
 		}
 	default:
-		fmt.Print(usage)
+		fmt.Println(usage)
 		os.Exit(1)
 	}
 
@@ -168,7 +168,7 @@ func main() {
 		switch outputMode {
 		case modeSDDL:
 			fmt.Println("Invalid destination mode while writing output to file attributes")
-			fmt.Print(usage)
+			fmt.Println(usage)
 			os.Exit(1)
 		default:
 			fmt.Println("Writing to a destination filename is not yet supported.")
@@ -193,7 +193,7 @@ func main() {
 		os.Exit(1)
 	default:
 		fmt.Println("Invalid output mode")
-		fmt.Print(usage)
+		fmt.Println(usage)
 		os.Exit(1)
 	}
 }
