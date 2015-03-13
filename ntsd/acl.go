@@ -425,3 +425,12 @@ func (g GUID) String() string {
 	output += hex.EncodeToString(g[10:16])
 	return output
 }
+
+type SecurityInformation uint32
+
+const (
+	OwnerSecurityInformation SecurityInformation = 0x00000001
+	GroupSecurityInformation SecurityInformation = 0x00000002
+	DACLSecurityInformation  SecurityInformation = 0x00000004
+	SACLSecurityInformation  SecurityInformation = 0x00000008
+)

@@ -6,7 +6,7 @@ import "log"
 // file
 func ReadFileRawSD(filename string) ([]byte, error) {
 	// FIXME: Retrieve the actual bytes via new syscall wrappers
-	log.Fatal("Reading security descriptors on Windows is not yet supported.")
+	log.Fatal("Reading Samba security descriptors on Windows is not supported.")
 	return nil, nil
 }
 

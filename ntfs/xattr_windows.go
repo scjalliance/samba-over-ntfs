@@ -1,13 +1,40 @@
 package ntfs
 
-import "log"
+import (
+	"log"
+	"syscall"
+
+	"go.scj.io/samba-over-ntfs/ntsd"
+)
+
+const (
+	maxSDLength = 65536 // Totally a guess; used for buffer allocation; needs to be aligned!
+)
 
 // ReadFileRawSD will return the raw security descriptor bytes for the requested
 // file
-func ReadFileRawSD(filename string) ([]byte, error) {
-	// FIXME: Retrieve the actual bytes via new syscall wrappers
-	log.Fatal("Reading security descriptors on Windows is not yet supported.")
-	return nil, nil
+func ReadFileRawSD(path string) ([]byte, error) {
+	if len(path) == 0 {
+		// FIXME: Figure out what sort of error we should really return here
+		//        &os.PathError{"ReadSecurityDescriptor", filename, err}
+		return nil, syscall.ERROR_FILE_NOT_FOUND
+	}
+	pathp, err := syscall.UTF16PtrFromString(path)
+	if err != nil {
+		return nil, err
+	}
+	// FIXME: Allow the caller to specify whether they want SACLs or not. Early
+	// testing suggests SACL access will always require elevated privileges.
+	//reqInfo := uint32(ntsd.OwnerSecurityInformation | ntsd.GroupSecurityInformation | ntsd.DACLSecurityInformation | ntsd.SACLSecurityInformation) // Everything
+	reqInfo := uint32(ntsd.OwnerSecurityInformation | ntsd.GroupSecurityInformation | ntsd.DACLSecurityInformation) // Sans SACL
+	var buffer [maxSDLength]byte                                                                                    // TODO: Factor out a function that takes a buffer as a parameter for high-throughput
+	bufLen, err := GetFileSecurity(pathp, reqInfo, buffer[:])
+	if err != nil {
+		return nil, err
+	}
+	data := make([]byte, bufLen)
+	copy(data, buffer[:])
+	return data, nil
 }
 
 // ReadFileAttribute will return the bytes in the given attribute for the requested
@@ -16,24 +43,3 @@ func ReadFileAttribute(path string, attr string) ([]byte, error) {
 	log.Fatal("Reading file attributes on Windows is not supported.")
 	return nil, nil
 }
-
-/*
-func GetFileRawSD(filename string) ([]byte, error) {
-	if len(filename) == 0 {
-		return nil, &os.PathError{"ReadSecurityDescriptor", filename, syscall.Errno(syscall.ERROR_PATH_NOT_FOUND)}
-	}
-
-	filenamep, err := syscall.UTF16PtrFromString(filename)
-	if err != nil {
-		return nil, &os.PathError{"ReadSecurityDescriptor", filename, err}
-	}
-	out = make([]byte, sz)
-	return out, err
-}
-*/
-
-/*
-func getSecurityInfo() (handle, objectType, securityInfo, owner, group, dacl, sacl, sd) {
-
-}
-*/
