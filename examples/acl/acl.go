@@ -146,7 +146,7 @@ func main() {
 			} else {
 				sdBytes, err = samba.ReadFileAttribute(sourceFilename, sourceAttribute)
 			}
-			os.Exit(1)
+			//os.Exit(1)
 		case modeSDDL:
 			fmt.Println("Invalid source mode while reading input from file attributes")
 			fmt.Println(usage)
