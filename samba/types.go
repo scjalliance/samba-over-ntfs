@@ -16,6 +16,9 @@ type NativeXAttr []byte
 
 // Valid returns true if the data is valid, otherwise false
 func (b NativeXAttr) Valid() bool {
+	if b == nil {
+		return false
+	}
 	if b.Version() != b.VersionNDR() {
 		return false
 	}
