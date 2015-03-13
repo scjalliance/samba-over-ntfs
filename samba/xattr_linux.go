@@ -6,6 +6,7 @@ const (
 	// AttributeName is the name of the extended attribute containing Samba
 	// encoded security descriptor data
 	AttributeName = "security.NTACL"
+	xattrReplace  = 0 // FIXME: we don't know what this value should be
 )
 
 // ReadFileRawSD will return the raw security descriptor bytes for the requested
@@ -16,21 +17,21 @@ func ReadFileRawSD(filename string) ([]byte, error) {
 
 // ReadFileAttribute will return the bytes in the given attribute for the requested
 // file
-func ReadFileAttribute(filename string, attribute string) ([]byte, error) {
-	sz, err := syscall.Getxattr(filename, xattr, nil)
+func ReadFileAttribute(filename string, attr string) ([]byte, error) {
+	sz, err := syscall.Getxattr(filename, attr, nil)
 	out := make([]byte, sz)
-	_, err = syscall.Getxattr(filename, aclXattr, out)
+	_, err = syscall.Getxattr(filename, attr, out)
 	return out, err
 }
 
 // WriteFileRawSD will write the given bytes to the specified file's security
 // descriptor attribute.
 func WriteFileRawSD(filename string, data []byte) error {
-	return WriteFileAttribute(filename, AttributeName)
+	return WriteFileAttribute(filename, AttributeName, data)
 }
 
 // WriteFileAttribute will write binary data to the specified file within the
 // a particular extended attribute. Existing data will be overwritten
 func WriteFileAttribute(path string, attr string, data []byte) error {
-	return syscall.Setxattr(filename, attribute, value, xattrReplace)
+	return syscall.Setxattr(path, attr, data, xattrReplace)
 }
