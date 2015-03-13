@@ -19,6 +19,9 @@ func ReadFileRawSD(filename string) ([]byte, error) {
 // file
 func ReadFileAttribute(path string, attr string) ([]byte, error) {
 	sz, err := syscall.Getxattr(path, attr, nil)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]byte, sz)
 	_, err = syscall.Getxattr(path, attr, out)
 	return out, err
