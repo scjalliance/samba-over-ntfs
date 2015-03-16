@@ -160,7 +160,9 @@ func process(fp string) {
 				// which appears to the userspace as a broken symlink
 				return
 			}
-			log.Printf("Error on NTFS file %s: %s\n", fp, err)
+			if *source == "ntfs" {
+				log.Printf("Error on NTFS file %s: %s\n", fp, err)
+			}
 		}
 		if *source == "samba" || (*source == "auto" && sdBytes == nil) {
 			sdBytes, err = samba.ReadFileAttribute(fp, *xattrSamba)
