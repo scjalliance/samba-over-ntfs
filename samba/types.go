@@ -318,6 +318,9 @@ func (b NativeObjectACE) ObjectFlags() ntsd.ObjectAccessControlFlag {
 
 // ObjectType
 func (b NativeObjectACE) ObjectType() ntsd.GUID {
+	if !b.ObjectFlags().HasFlag(ntsd.ObjectTypePresent) {
+		return ntsd.GUID{}
+	}
 	return UnmarshalGUID(b[12:28])
 }
 
@@ -325,6 +328,9 @@ func (b NativeObjectACE) InheritedObjectType() ntsd.GUID {
 	// The location of this member varies based on the flags.
 	//
 	// See https://msdn.microsoft.com/en-us/library/windows/desktop/aa374857
+	if !b.ObjectFlags().HasFlag(ntsd.InheritedObjectTypePresent) {
+		return ntsd.GUID{}
+	}
 	if b.ObjectFlags().HasFlag(ntsd.ObjectTypePresent) {
 		return UnmarshalGUID(b[28:44])
 	}
@@ -371,7 +377,7 @@ func (b NativeSID) IdentifierAuthority() ntsd.IdentifierAuthority {
 // SubAuthority returns the sub authority of the given index for the security
 // identifier.
 func (b NativeSID) SubAuthority(index uint8) uint32 {
-	start := 8 + index*4
+	start := 8 + int(index)*4
 	end := start + 4
 	return binary.LittleEndian.Uint32(b[start:end])
 }

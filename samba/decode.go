@@ -132,12 +132,13 @@ func UnmarshalACE(b []byte) (ntsd.ACE, uint16) {
 	case ntsd.AccessAllowedObjectControl, ntsd.AccessDeniedObjectControl, ntsd.SystemAuditObjectControl, ntsd.SystemAlarmObjectControl:
 		n := NativeObjectACE(b)
 		return ntsd.ACE{
-			Type:        h.Type(),
-			Flags:       h.Flags(),
-			Mask:        n.Mask(),
-			SID:         n.SID(),
-			ObjectFlags: n.ObjectFlags(),
-			ObjectType:  n.ObjectType(),
+			Type:                h.Type(),
+			Flags:               h.Flags(),
+			Mask:                n.Mask(),
+			SID:                 n.SID(),
+			ObjectFlags:         n.ObjectFlags(),
+			ObjectType:          n.ObjectType(),
+			InheritedObjectType: n.InheritedObjectType(),
 		}, h.Size()
 	default:
 		return ntsd.ACE{
