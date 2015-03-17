@@ -95,11 +95,19 @@ func (b NativeSecurityDescriptorHashV4) SetSecurityDescriptorPresence(present bo
 	}
 }
 
-// HashType returns the Samba hash type
+// HashType returns the Samba hash type.
 func (b NativeSecurityDescriptorHashV4) HashType() uint16 { return binary.LittleEndian.Uint16(b[4:6]) }
 
-// Hash returns the 64-byte hash as a byte slice
-func (b NativeSecurityDescriptorHashV4) Hash() []uint8 { return b[6:70] }
+// SetHashType sets the Samba hash type.
+func (b NativeSecurityDescriptorHashV4) SetHashType(hashType uint16) {
+	binary.LittleEndian.PutUint16(b[4:6], hashType)
+}
+
+// Hash returns the 64-byte hash as a byte slice.
+func (b NativeSecurityDescriptorHashV4) Hash() []byte { return b[6:70] }
+
+// SetHash sets the 64-byte hash to the given byte slice.
+func (b NativeSecurityDescriptorHashV4) SetHash(hash []byte) { copy(b[6:70], hash[0:64]) }
 
 // Description of the entity responsible for generating the hash.
 func (b NativeSecurityDescriptorHashV4) Description() string {
@@ -111,6 +119,19 @@ func (b NativeSecurityDescriptorHashV4) Description() string {
 	return ""
 }
 
+// SetDescription sets the description of the entity responsible for generating
+// the hash. It returns the offset in bytes to the next data element.
+func (b NativeSecurityDescriptorHashV4) SetDescription(description string) int {
+	length := copy(b[70:], description)
+	b[70+length] = '\x00'
+	return 70 + length + 1
+}
+
+// TimeOffset is an offset to an NTTIME structure representing the last time the
+// security descriptor was modified.
+//
+// The offset is in bytes and is relative to the start of the
+// NativeSecurityDescriptorHashV4.
 func (b NativeSecurityDescriptorHashV4) TimeOffset() uint32 {
 	// FIXME: Return error if no null terminator is found?
 	s := b[70:]
@@ -121,9 +142,21 @@ func (b NativeSecurityDescriptorHashV4) TimeOffset() uint32 {
 	return uint32(len(b))
 }
 
+// Time is the last time the security descriptor was modified.
 func (b NativeSecurityDescriptorHashV4) Time() uint64 {
 	offset := b.TimeOffset()
 	return binary.LittleEndian.Uint64(b[offset : offset+8])
+}
+
+// SetTime sets the last time the security descriptor was modified. It returns
+// the offset in bytes to the next data element.
+//
+// Offset is in bytes and is relative to the start of the
+// NativeSecurityDescriptorHashV4. It determines the location within the stream
+// at which the time is written.
+func (b NativeSecurityDescriptorHashV4) SetTime(time uint64, offset int) int {
+	binary.LittleEndian.PutUint64(b[offset:offset+8], time)
+	return offset + 8
 }
 
 func (b NativeSecurityDescriptorHashV4) SysACLHashOffset() uint32 {
@@ -134,6 +167,17 @@ func (b NativeSecurityDescriptorHashV4) SysACLHashOffset() uint32 {
 func (b NativeSecurityDescriptorHashV4) SysACLHash() []uint8 {
 	offset := b.SysACLHashOffset()
 	return b[offset : offset+64]
+}
+
+// SetSysACLHash sets the 64-byte hash to the given byte slice. It returns the
+// offset in bytes to the next data element.
+//
+// Offset is in bytes and is relative to the start of the
+// NativeSecurityDescriptorHashV4. It determines the location within the stream
+// at which the hash is written.
+func (b NativeSecurityDescriptorHashV4) SetSysACLHash(hash []byte, offset int) int {
+	copy(b[offset:offset+64], hash[0:64])
+	return offset + 64
 }
 
 // SecurityDescriptorOffset is an offset to a security descriptor. It is only
