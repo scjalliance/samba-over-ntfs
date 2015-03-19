@@ -1,6 +1,22 @@
 package samba
 
-import "go.scj.io/samba-over-ntfs/ntsd"
+import (
+	"io"
+
+	"go.scj.io/samba-over-ntfs/ntsd"
+)
+
+type Encoder struct {
+	w io.Writer
+}
+
+func NewEncoder(w io.Writer) *Encoder {
+	return &Encoder{w: w}
+}
+
+func (enc *Encoder) EncodeSecurityDescriptor(sd *ntsd.SecurityDescriptor) {
+
+}
 
 func MarshalXAttr(sd *ntsd.SecurityDescriptor, b []byte) {
 	// TODO: Take the version to write as a parameter?
