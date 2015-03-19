@@ -165,7 +165,7 @@ func main() {
 
 	switch inputMode {
 	case modeNTFS:
-		sd = ntfs.UnmarshalSecurityDescriptor(sdBytes)
+		sd = ntsd.UnmarshalSecurityDescriptor(sdBytes)
 	case modeSamba:
 		sd = samba.UnmarshalXAttr(sdBytes)
 	case modeSDDL:

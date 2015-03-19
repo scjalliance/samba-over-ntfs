@@ -13,7 +13,7 @@ func ReadFileSD(filename string) (*ntsd.SecurityDescriptor, error) {
 		return nil, err
 	}
 	sd := new(ntsd.SecurityDescriptor)
-	*sd = UnmarshalSecurityDescriptor(bytes)
+	*sd = ntsd.UnmarshalSecurityDescriptor(bytes)
 	return sd, nil
 }
 
