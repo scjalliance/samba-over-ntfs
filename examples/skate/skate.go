@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"go.scj.io/samba-over-ntfs/ntfs"
-	"go.scj.io/samba-over-ntfs/ntsd"
+	"go.scj.io/samba-over-ntfs/ntsecurity"
 	"go.scj.io/samba-over-ntfs/samba"
 )
 
@@ -150,7 +150,7 @@ func process(fp string) {
 				sdBytes, err = ntfs.ReadFileAttribute(fp, *xattrNTFS)
 			}
 			if err == nil {
-				sd := ntsd.UnmarshalSecurityDescriptor(sdBytes)
+				sd := ntsecurity.UnmarshalSecurityDescriptor(sdBytes)
 				sd.SDDL() // should we be running this at all?  does it prove anything for our testing?
 				return
 			}

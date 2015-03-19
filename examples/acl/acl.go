@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"go.scj.io/samba-over-ntfs/ntfs"
-	"go.scj.io/samba-over-ntfs/ntsd"
+	"go.scj.io/samba-over-ntfs/ntsecurity"
 	"go.scj.io/samba-over-ntfs/samba"
 )
 
@@ -161,11 +161,11 @@ func main() {
 	}
 
 	// Step 2: Parse the input bytes
-	var sd ntsd.SecurityDescriptor
+	var sd ntsecurity.SecurityDescriptor
 
 	switch inputMode {
 	case modeNTFS:
-		sd = ntsd.UnmarshalSecurityDescriptor(sdBytes)
+		sd = ntsecurity.UnmarshalSecurityDescriptor(sdBytes)
 	case modeSamba:
 		sd = samba.UnmarshalXAttr(sdBytes)
 	case modeSDDL:

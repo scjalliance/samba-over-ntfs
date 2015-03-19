@@ -1,8 +1,8 @@
 package samba
 
-import "go.scj.io/samba-over-ntfs/ntsd"
+import "go.scj.io/samba-over-ntfs/ntsecurity"
 
-func MarshalXAttr(sd *ntsd.SecurityDescriptor, b []byte) {
+func MarshalXAttr(sd *ntsecurity.SecurityDescriptor, b []byte) {
 	// TODO: Take the version to write as a parameter?
 	n := NativeXAttr(b)
 	n.SetVersion(4)
@@ -14,7 +14,7 @@ func MarshalXAttr(sd *ntsd.SecurityDescriptor, b []byte) {
 	MarshalSecurityDescriptorV4(sd, b[8:])
 }
 
-func MarshalSecurityDescriptorV4(sd *ntsd.SecurityDescriptor, b []byte) {
+func MarshalSecurityDescriptorV4(sd *ntsecurity.SecurityDescriptor, b []byte) {
 	n := NativeSecurityDescriptorHashV4(b)
 	if sd == nil {
 		n.SetSecurityDescriptorPresence(false)
@@ -22,10 +22,6 @@ func MarshalSecurityDescriptorV4(sd *ntsd.SecurityDescriptor, b []byte) {
 	}
 	n.SetSecurityDescriptorPresence(true)
 	MarshalSecurityDescriptor(sd, b)
-}
-
-func MarshalSecurityDescriptor(sd *ntsd.SecurityDescriptor, b []byte) {
-	// TODO: Write this
 }
 
 const (
@@ -38,16 +34,16 @@ const (
 	securityDescriptorV4FixedBytes         = securityDescriptorV4PreambleFixedBytes + 2 + 64 + len(XattrDescription) + 8 + 64
 )
 
-func MarshalXattrBytes(sd *ntsd.SecurityDescriptor) int {
+func MarshalXattrBytes(sd *ntsecurity.SecurityDescriptor) int {
 	if sd == nil {
 		return xattrFixedBytes
 	}
 	return xattrFixedBytes + MarshalSecurityDescriptorV4Bytes(sd)
 }
 
-func MarshalSecurityDescriptorV4Bytes(sd *ntsd.SecurityDescriptor) int {
+func MarshalSecurityDescriptorV4Bytes(sd *ntsecurity.SecurityDescriptor) int {
 	if sd == nil {
 		return securityDescriptorV4PreambleFixedBytes
 	}
-	return securityDescriptorV4FixedBytes + ntsd.MarshalSecurityDescriptorBytes(sd)
+	return securityDescriptorV4FixedBytes + ntsecurity.MarshalSecurityDescriptorBytes(sd)
 }

@@ -4,7 +4,7 @@ import (
 	"log"
 	"syscall"
 
-	"go.scj.io/samba-over-ntfs/ntsd"
+	"go.scj.io/samba-over-ntfs/ntsecurity"
 )
 
 const (
@@ -25,9 +25,9 @@ func ReadFileRawSD(path string) ([]byte, error) {
 	}
 	// FIXME: Allow the caller to specify whether they want SACLs or not. Early
 	// testing suggests SACL access will always require elevated privileges.
-	//reqInfo := uint32(ntsd.OwnerSecurityInformation | ntsd.GroupSecurityInformation | ntsd.DACLSecurityInformation | ntsd.SACLSecurityInformation) // Everything
-	reqInfo := uint32(ntsd.OwnerSecurityInformation | ntsd.GroupSecurityInformation | ntsd.DACLSecurityInformation) // Sans SACL
-	var buffer [maxSDLength]byte                                                                                    // TODO: Factor out a function that takes a buffer as a parameter for high-throughput
+	//reqInfo := uint32(ntsecurity.OwnerSecurityInformation | ntsecurity.GroupSecurityInformation | ntsecurity.DACLSecurityInformation | ntsecurity.SACLSecurityInformation) // Everything
+	reqInfo := uint32(ntsecurity.OwnerSecurityInformation | ntsecurity.GroupSecurityInformation | ntsecurity.DACLSecurityInformation) // Sans SACL
+	var buffer [maxSDLength]byte                                                                                                      // TODO: Factor out a function that takes a buffer as a parameter for high-throughput
 	bufLen, err := GetFileSecurity(pathp, reqInfo, buffer[:])
 	if err != nil {
 		return nil, err

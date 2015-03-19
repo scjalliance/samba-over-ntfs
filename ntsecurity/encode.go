@@ -1,4 +1,8 @@
-package ntsd
+package ntsecurity
+
+func MarshalSecurityDescriptor(sd *SecurityDescriptor, b []byte) {
+	// TODO: Write this
+}
 
 const (
 	securityDescriptorFixedBytes = 1 + 1 + 2 + 4 + 4 + 4 + 4

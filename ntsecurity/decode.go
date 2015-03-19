@@ -1,4 +1,4 @@
-package ntsd
+package ntsecurity
 
 import "encoding/binary"
 
