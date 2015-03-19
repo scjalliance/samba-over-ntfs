@@ -11,26 +11,26 @@ const (
 
 // ReadFileRawSD will return the raw security descriptor bytes for the requested
 // file
-func ReadFileRawSD(filename string) ([]byte, error) {
-	return ReadFileAttribute(filename, AttributeName)
+func ReadFileRawSD(path string) ([]byte, error) {
+	return ReadFileAttribute(path, AttributeName)
 }
 
 // ReadFileAttribute will return the bytes in the given attribute for the requested
 // file
-func ReadFileAttribute(filename string, attr string) ([]byte, error) {
-	sz, err := syscall.Getxattr(filename, attr, nil)
+func ReadFileAttribute(path string, attr string) ([]byte, error) {
+	sz, err := syscall.Getxattr(path, attr, nil)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]byte, sz)
-	_, err = syscall.Getxattr(filename, attr, out)
+	_, err = syscall.Getxattr(path, attr, out)
 	return out, err
 }
 
 // WriteFileRawSD will write the given bytes to the specified file's security
 // descriptor attribute.
-func WriteFileRawSD(filename string, data []byte) error {
-	return WriteFileAttribute(filename, AttributeName, data)
+func WriteFileRawSD(path string, data []byte) error {
+	return WriteFileAttribute(path, AttributeName, data)
 }
 
 // WriteFileAttribute will write binary data to the specified file within

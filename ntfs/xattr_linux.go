@@ -11,8 +11,8 @@ const (
 
 // ReadFileRawSD will return the raw security descriptor bytes for the requested
 // file
-func ReadFileRawSD(filename string) ([]byte, error) {
-	return ReadFileAttribute(filename, AttributeName)
+func ReadFileRawSD(path string) ([]byte, error) {
+	return ReadFileAttribute(path, AttributeName)
 }
 
 // ReadFileAttribute will return the bytes in the given attribute for the requested

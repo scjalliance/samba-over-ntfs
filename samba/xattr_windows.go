@@ -4,7 +4,7 @@ import "log"
 
 // ReadFileRawSD will return the raw security descriptor bytes for the requested
 // file
-func ReadFileRawSD(filename string) ([]byte, error) {
+func ReadFileRawSD(path string) ([]byte, error) {
 	// FIXME: Retrieve the actual bytes via new syscall wrappers
 	log.Fatal("Reading Samba security descriptors on Windows is not supported.")
 	return nil, nil

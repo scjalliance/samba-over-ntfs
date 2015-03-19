@@ -8,8 +8,8 @@ import (
 )
 
 // ReadFileSD will return the security descriptor for the requested file
-func ReadFileSD(filename string) (*ntsd.SecurityDescriptor, error) {
-	bytes, err := ReadFileRawSD(filename)
+func ReadFileSD(path string) (*ntsd.SecurityDescriptor, error) {
+	bytes, err := ReadFileRawSD(path)
 	if err != nil {
 		return nil, err
 	}
@@ -19,9 +19,9 @@ func ReadFileSD(filename string) (*ntsd.SecurityDescriptor, error) {
 }
 
 // WriteFileSD will write the given security descriptor to the specified file
-func WriteFileSD(filename string, sd *ntsd.SecurityDescriptor) error {
+func WriteFileSD(path string, sd *ntsd.SecurityDescriptor) error {
 	// TODO: Write this function
-	//return WriteFileRawSD(filename, AttributeName)
+	//return WriteFileRawSD(path, AttributeName)
 	log.Fatal("Writing to files is not yet supported")
 	return nil
 }
