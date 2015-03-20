@@ -28,7 +28,7 @@ func ReadFileRawSD(path string) ([]byte, error) {
 	//reqInfo := uint32(ntsecurity.OwnerSecurityInformation | ntsecurity.GroupSecurityInformation | ntsecurity.DACLSecurityInformation | ntsecurity.SACLSecurityInformation) // Everything
 	reqInfo := uint32(ntsecurity.OwnerSecurityInformation | ntsecurity.GroupSecurityInformation | ntsecurity.DACLSecurityInformation) // Sans SACL
 	var buffer [maxSDLength]byte                                                                                                      // TODO: Factor out a function that takes a buffer as a parameter for high-throughput
-	bufLen, err := GetFileSecurity(pathp, reqInfo, buffer[:])
+	bufLen, err := ntsecurity.GetFileSecurity(pathp, reqInfo, buffer[:])
 	if err != nil {
 		return nil, err
 	}

@@ -1,4 +1,4 @@
-package ntfs
+package ntsecurity
 
 import (
 	"syscall"
