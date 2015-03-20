@@ -21,7 +21,7 @@ func MarshalSecurityDescriptorV4(sd *ntsecurity.SecurityDescriptor, b []byte) {
 		return
 	}
 	n.SetSecurityDescriptorPresence(true)
-	MarshalSecurityDescriptor(sd, b)
+	ntsecurity.MarshalSecurityDescriptor(sd, b)
 }
 
 const (
