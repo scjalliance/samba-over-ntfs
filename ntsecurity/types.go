@@ -16,10 +16,19 @@ func (b NativeSecurityDescriptor) SetRevision(v uint8) { b[0] = v }
 // Alignment data reserved for future use.
 func (b NativeSecurityDescriptor) Alignment() uint8 { return b[1] }
 
+// SetAlignment sets the alignment data, which is reserved for future use.
+func (b NativeSecurityDescriptor) SetAlignment(v uint8) { b[1] = v }
+
 // Control contains the flags qualifying the type of the descriptor and
 // providing context for the owner, group, system ACL and discretionary ACL.
 func (b NativeSecurityDescriptor) Control() SecurityDescriptorControl {
 	return SecurityDescriptorControl(binary.LittleEndian.Uint16(b[2:4]))
+}
+
+// SetControl sets the flags qualifying the type of the descriptor and
+// providing context for the owner, group, system ACL and discretionary ACL.
+func (b NativeSecurityDescriptor) SetControl(v SecurityDescriptorControl) {
+	binary.LittleEndian.PutUint16(b[2:4], uint16(v))
 }
 
 // OwnerOffset is an offset to a SID representing the object's owner. If this
@@ -31,6 +40,15 @@ func (b NativeSecurityDescriptor) OwnerOffset() uint32 {
 	return binary.LittleEndian.Uint32(b[4:8])
 }
 
+// SetOwnerOffset sets the offset to a SID representing the object's owner. If
+// this is zero, no owner SID is present in the descriptor.
+//
+// The offset is in bytes and is relative to the start of the underlying
+// byte stream.
+func (b NativeSecurityDescriptor) SetOwnerOffset(v uint32) {
+	binary.LittleEndian.PutUint32(b[4:8], v)
+}
+
 // GroupOffset is an offset to a SID representing the object's owner. If this
 // is zero, no owner SID is present in the descriptor.
 //
@@ -38,6 +56,15 @@ func (b NativeSecurityDescriptor) OwnerOffset() uint32 {
 // byte stream.
 func (b NativeSecurityDescriptor) GroupOffset() uint32 {
 	return binary.LittleEndian.Uint32(b[8:12])
+}
+
+// SetGroupOffset sets the offset to a SID representing the object's owner. If
+// this is zero, no owner SID is present in the descriptor.
+//
+// The offset is in bytes and is relative to the start of the underlying
+// byte stream.
+func (b NativeSecurityDescriptor) SetGroupOffset(v uint32) {
+	binary.LittleEndian.PutUint32(b[8:12], v)
 }
 
 // SACLOffset is an offset to a system ACL. It is only valid if
@@ -48,6 +75,16 @@ func (b NativeSecurityDescriptor) GroupOffset() uint32 {
 // byte stream.
 func (b NativeSecurityDescriptor) SACLOffset() uint32 {
 	return binary.LittleEndian.Uint32(b[12:16])
+}
+
+// SetSACLOffset sets the offset to a system ACL. It is only valid if
+// SE_SACL_PRESENT is set in the control field. If SE_SACL_PRESENT is set but
+// SaclOffset is zero, a NULL ACL is specified.
+//
+// The offset is in bytes and is relative to the start of the underlying
+// byte stream.
+func (b NativeSecurityDescriptor) SetSACLOffset(v uint32) {
+	binary.LittleEndian.PutUint32(b[12:16], v)
 }
 
 // DACLOffset is an offset to a discretionary ACL. It is only valid if
@@ -61,6 +98,17 @@ func (b NativeSecurityDescriptor) DACLOffset() uint32 {
 	return binary.LittleEndian.Uint32(b[16:20])
 }
 
+// SetDACLOffset sets the offset to a discretionary ACL. It is only valid if
+// SE_DACL_PRESENT is set in the control field. If SE_DACL_PRESENT is set but
+// DaclOffset is zero, a NULL ACL (unconditionally granting access) is
+// specified.
+//
+// The offset is in bytes and is relative to the start of the underlying
+// byte stream.
+func (b NativeSecurityDescriptor) SetDACLOffset(v uint32) {
+	binary.LittleEndian.PutUint32(b[16:20], v)
+}
+
 // NativeACL is a byte slice wrapper that acts as a translator
 // for the on-disk representation of access control lists. One of its functions
 // is to convert member values into the appropriate endianness.
@@ -72,15 +120,34 @@ type NativeACL []byte
 //       alignment byte, but we're keeping them separate here to match NT.
 func (b NativeACL) Revision() uint8 { return b[0] }
 
+// SetRevision sets the revision level of the security descriptor
+//
+// Note: Samba actually defines this as a uint16 instead of having a separate
+//       alignment byte, but we're keeping them separate here to match NT.
+func (b NativeACL) SetRevision(v uint8) { b[0] = v }
+
 // Alignment1 data reserved for future use.
 func (b NativeACL) Alignment1() uint8 { return b[1] }
+
+// SetAlignment1 sets alignment data reserved for future use.
+func (b NativeACL) SetAlignment1(v uint8) { b[1] = v }
 
 // Alignment2 data reserved for future use.
 func (b NativeACL) Alignment2() uint16 { return binary.LittleEndian.Uint16(b[6:8]) }
 
+// SetAlignment2 sets alignment data reserved for future use.
+func (b NativeACL) SetAlignment2(v uint16) {
+	binary.LittleEndian.PutUint16(b[6:8], v)
+}
+
 // Size in bytes of the NativeACL
 func (b NativeACL) Size() uint16 {
 	return binary.LittleEndian.Uint16(b[2:4])
+}
+
+// SetSize sets the size in bytes of the NativeACL
+func (b NativeACL) SetSize(v uint16) {
+	binary.LittleEndian.PutUint16(b[2:4], v)
 }
 
 // Count returns the number of access control entries in the access control
@@ -92,12 +159,29 @@ func (b NativeACL) Count() uint16 {
 	return binary.LittleEndian.Uint16(b[4:6])
 }
 
+// SetCount sets the number of access control entries in the access control
+// list.
+//
+// Note: Samba actually defines this as a uint32 instead of having a separate
+//       alignment uint16, but we're keeping them separate here to match NT.
+func (b NativeACL) SetCount() uint16 {
+	return binary.LittleEndian.Uint16(b[4:6])
+}
+
 // Offset is a byte offset to the first access control entry.
 //
 // The offset is in bytes and is relative to the start of the
 // NativeACL.
 func (b NativeACL) Offset() uint16 {
 	return 8
+}
+
+// SetOffset sets the byte offset to the first access control entry.
+//
+// The offset is in bytes and is relative to the start of the
+// NativeACL.
+func (b NativeACL) SetOffset(v uint16) {
+	binary.LittleEndian.PutUint16(b[6:8], v)
 }
 
 // NativeACEHeader is a byte slice wrapper that acts as a translator
