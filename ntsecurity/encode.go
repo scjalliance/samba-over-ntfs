@@ -48,7 +48,7 @@ func MarshalACEBytes(ace *ACE) int {
 		if ace.ObjectFlags.HasFlag(ObjectTypePresent) {
 			size += 16
 		}
-		if ace.ObjectFlags.HasFlag(ObjectTypePresent) {
+		if ace.ObjectFlags.HasFlag(InheritedObjectTypePresent) {
 			size += 16
 		}
 		size += MarshalSIDBytes(&ace.SID)
