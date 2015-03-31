@@ -21,15 +21,16 @@ func (sd *SambaSecDescXAttr) UnmarshalBinary(data []byte) error {
 		}
 		return nil
 	}
+	offset := n.SecurityDescriptorOffset()
 	switch n.Version() {
 	case 4:
-		return (*SambaSecDescV4)(sd).UnmarshalBinary(data[n.SecurityDescriptorOffset():], n.SecurityDescriptorOffset())
+		return (*SambaSecDescV4)(sd).UnmarshalBinary(data[offset:], offset)
 	case 3:
-		return (*SambaSecDescV3)(sd).UnmarshalBinary(data[n.SecurityDescriptorOffset():], n.SecurityDescriptorOffset())
+		return (*SambaSecDescV3)(sd).UnmarshalBinary(data[offset:], offset)
 	case 2:
-		return (*SambaSecDescV2)(sd).UnmarshalBinary(data[n.SecurityDescriptorOffset():], n.SecurityDescriptorOffset())
+		return (*SambaSecDescV2)(sd).UnmarshalBinary(data[offset:], offset)
 	case 1:
-		return (*SambaSecDescV1)(sd).UnmarshalBinary(data[n.SecurityDescriptorOffset():], n.SecurityDescriptorOffset())
+		return (*SambaSecDescV1)(sd).UnmarshalBinary(data[offset:], offset)
 	default:
 		if sd != nil {
 			*sd = SambaSecDescXAttr{} // Is this appropriate?
@@ -41,10 +42,17 @@ func (sd *SambaSecDescXAttr) UnmarshalBinary(data []byte) error {
 // UnmarshalBinary reads a security descriptor from a byte slice containing
 // security descriptor and hash data formatted according to a Samba NDR data
 // layout version 4.
+//
+// Offset is the number of bytes that the data slice is offset from the
+// beginning of the underlying byte stream. It is subtracted from the relative
+// offsets in the security descriptor itself. It is not subtracted from the
+// offsets in the ACLs, which are always relative to the start of the security
+// descriptor.
 func (sd *SambaSecDescV4) UnmarshalBinary(data []byte, offset uint32) error {
 	n := NativeSecurityDescriptorHashV4(data)
+	sdo := n.SecurityDescriptorOffset()
 	//fmt.Printf("%d %d %x %s %d %x %d %x %d\n", binary.LittleEndian.Uint32(b[0:4]), n.HashType(), n.Hash(), n.Description(), n.TimeOffset(), b[n.TimeOffset():n.TimeOffset()+8], n.SysACLHashOffset(), n.SysACLHash(), n.SecurityDescriptorOffset())
-	return (*SambaSecDescV1)(sd).UnmarshalBinary(data[n.SecurityDescriptorOffset():], offset)
+	return (*SambaSecDescV1)(sd).UnmarshalBinary(data[sdo:], offset+sdo)
 }
 
 // UnmarshalBinary reads a security descriptor from a byte slice containing
@@ -66,6 +74,12 @@ func (sd *SambaSecDescV2) UnmarshalBinary(data []byte, offset uint32) (err error
 // UnmarshalBinary reads a security descriptor from a byte slice
 // containing security descriptor data formatted according to a Samba NDR data
 // layout.
+//
+// Offset is the number of bytes that the data slice is offset from the
+// beginning of the underlying byte stream. It is subtracted from the relative
+// offsets in the security descriptor itself. It is not subtracted from the
+// offsets in the ACLs, which are always relative to the start of the security
+// descriptor.
 func (sd *SambaSecDescV1) UnmarshalBinary(data []byte, offset uint32) (err error) {
 	n := ntsecurity.NativeSecurityDescriptor(data)
 	//fmt.Printf("%d %d %d %d\n", n.OwnerOffset(), n.GroupOffset(), n.SACLOffset(), n.DACLOffset())
