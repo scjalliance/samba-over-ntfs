@@ -1,87 +1,107 @@
 package samba
 
-import "go.scj.io/samba-over-ntfs/ntsecurity"
+import (
+	"errors"
 
-// UnmarshalXAttr reads a security descriptor from a byte slice containing
-// system.NTACL data formatted according to a Samba NDR data layout.
-func UnmarshalXAttr(b []byte) ntsecurity.SecurityDescriptor {
-	n := NativeXAttr(b)
+	"go.scj.io/samba-over-ntfs/ntsecurity"
+)
+
+// UnmarshalBinary reads a security descriptor from a byte slice containing
+// system.NTACL attribute data formatted according to a Samba NDR data layout.
+func (sd *SambaSecDescXAttr) UnmarshalBinary(data []byte) error {
+	n := NativeXAttr(data)
 	//fmt.Printf("%d %d %x %d\n", n.Version(), n.VersionNDR(), b[4:8], n.SecurityDescriptorOffset())
-	if !n.Valid() || !n.ContainsSecurityDescriptor() {
-		// TODO: Return an error of some kind
-		return ntsecurity.SecurityDescriptor{}
+	if !n.Valid() {
+		return errors.New("Invalid Samba XAttr Security Descriptor Data")
+	}
+	if !n.ContainsSecurityDescriptor() {
+		// TODO: Decide whether this should be an error
+		if sd != nil {
+			*sd = SambaSecDescXAttr{} // Is this appropriate?
+		}
+		return nil
 	}
 	switch n.Version() {
 	case 4:
-		return UnmarshalSecurityDescriptorHashV4(b[n.SecurityDescriptorOffset():], b)
+		return (*SambaSecDescV4)(sd).UnmarshalBinary(data[n.SecurityDescriptorOffset():], n.SecurityDescriptorOffset())
 	case 3:
-		return UnmarshalSecurityDescriptorHashV3(b[n.SecurityDescriptorOffset():], b)
+		return (*SambaSecDescV3)(sd).UnmarshalBinary(data[n.SecurityDescriptorOffset():], n.SecurityDescriptorOffset())
 	case 2:
-		return UnmarshalSecurityDescriptorHashV2(b[n.SecurityDescriptorOffset():], b)
+		return (*SambaSecDescV2)(sd).UnmarshalBinary(data[n.SecurityDescriptorOffset():], n.SecurityDescriptorOffset())
 	case 1:
-		return UnmarshalSecurityDescriptor(b[n.SecurityDescriptorOffset():], b)
+		return (*SambaSecDescV1)(sd).UnmarshalBinary(data[n.SecurityDescriptorOffset():], n.SecurityDescriptorOffset())
 	default:
-		// TODO: Return an error of some kind
-		return ntsecurity.SecurityDescriptor{}
+		if sd != nil {
+			*sd = SambaSecDescXAttr{} // Is this appropriate?
+		}
+		return errors.New("Unknown Samba XAttr NTACL Version")
 	}
 }
 
-// UnmarshalSecurityDescriptorHashV4 reads a security descriptor from a byte
-// slice containing security descriptor and hash data formatted according to a
-// Samba NDR data layout version 4.
-func UnmarshalSecurityDescriptorHashV4(b []byte, s []byte) ntsecurity.SecurityDescriptor {
-	n := NativeSecurityDescriptorHashV4(b)
+// UnmarshalBinary reads a security descriptor from a byte slice containing
+// security descriptor and hash data formatted according to a Samba NDR data
+// layout version 4.
+func (sd *SambaSecDescV4) UnmarshalBinary(data []byte, offset uint32) error {
+	n := NativeSecurityDescriptorHashV4(data)
 	//fmt.Printf("%d %d %x %s %d %x %d %x %d\n", binary.LittleEndian.Uint32(b[0:4]), n.HashType(), n.Hash(), n.Description(), n.TimeOffset(), b[n.TimeOffset():n.TimeOffset()+8], n.SysACLHashOffset(), n.SysACLHash(), n.SecurityDescriptorOffset())
-	return UnmarshalSecurityDescriptor(b[n.SecurityDescriptorOffset():], s)
+	return (*SambaSecDescV1)(sd).UnmarshalBinary(data[n.SecurityDescriptorOffset():], offset)
 }
 
-// UnmarshalSecurityDescriptorHashV3 reads a security descriptor from a byte
-// slice containing security descriptor and hash data formatted according to a
-// Samba NDR data layout version 3.
-func UnmarshalSecurityDescriptorHashV3(b []byte, s []byte) ntsecurity.SecurityDescriptor {
+// UnmarshalBinary reads a security descriptor from a byte slice containing
+// security descriptor and hash data formatted according to a Samba NDR data
+// layout version 3.
+func (sd *SambaSecDescV3) UnmarshalBinary(data []byte, offset uint32) (err error) {
 	// TODO: Write this code or drop support
-	return ntsecurity.SecurityDescriptor{}
+	return
 }
 
-// UnmarshalSecurityDescriptorHashV2 reads a security descriptor from a byte
-// slice containing security descriptor and hash data formatted according to a
-// Samba NDR data layout version 2.
-func UnmarshalSecurityDescriptorHashV2(b []byte, s []byte) ntsecurity.SecurityDescriptor {
+// UnmarshalBinary reads a security descriptor from a byte slice containing
+// security descriptor and hash data formatted according to a Samba NDR data
+// layout version 2.
+func (sd *SambaSecDescV2) UnmarshalBinary(data []byte, offset uint32) (err error) {
 	// TODO: Write this code or drop support
-	return ntsecurity.SecurityDescriptor{}
+	return
 }
 
-// UnmarshalSecurityDescriptor reads a security descriptor from a byte slice
+// UnmarshalBinary reads a security descriptor from a byte slice
 // containing security descriptor data formatted according to a Samba NDR data
 // layout.
-func UnmarshalSecurityDescriptor(b []byte, s []byte) ntsecurity.SecurityDescriptor {
-	// TODO: Write this code
-	n := ntsecurity.NativeSecurityDescriptor(b)
+func (sd *SambaSecDescV1) UnmarshalBinary(data []byte, offset uint32) (err error) {
+	n := ntsecurity.NativeSecurityDescriptor(data)
 	//fmt.Printf("%d %d %d %d\n", n.OwnerOffset(), n.GroupOffset(), n.SACLOffset(), n.DACLOffset())
-	d := ntsecurity.SecurityDescriptor{
+	// TODO: Consider direct assignment instead of doing this extra copy operation
+	*sd = SambaSecDescV1{
 		Revision:  n.Revision(),
 		Alignment: n.Alignment(),
 		Control:   n.Control(),
 	}
 	if n.OwnerOffset() > 0 {
-		// FIXME: Validate SID before allocating memory?
-		d.Owner = new(ntsecurity.SID)
-		*d.Owner = ntsecurity.UnmarshalSID(s[n.OwnerOffset():]) // FIXME: Use the correct end of the SID byte slice?
+		sd.Owner = new(ntsecurity.SID)                                // FIXME: Validate SID before allocating memory?
+		err = sd.Owner.UnmarshalBinary(data[n.OwnerOffset()-offset:]) // FIXME: Use the correct end of the SID byte slice?
+		if err != nil {
+			return
+		}
 	}
 	if n.GroupOffset() > 0 {
-		// FIXME: Validate SID before allocating memory?
-		d.Group = new(ntsecurity.SID)
-		*d.Group = ntsecurity.UnmarshalSID(s[n.GroupOffset():]) // FIXME: Use the correct end of the SID byte slice?
+		sd.Group = new(ntsecurity.SID)                                // FIXME: Validate SID before allocating memory?
+		err = sd.Group.UnmarshalBinary(data[n.GroupOffset()-offset:]) // FIXME: Use the correct end of the SID byte slice?
+		if err != nil {
+			return
+		}
 	}
-	if d.Control.HasFlag(ntsecurity.SACLPresent) && n.SACLOffset() > 0 {
-		// FIXME: Validate ACL before allocating memory?
-		d.SACL = new(ntsecurity.ACL)
-		*d.SACL = ntsecurity.UnmarshalACL(s[n.SACLOffset():]) // FIXME: Use the correct end of the ACL byte slice?
+	if sd.Control.HasFlag(ntsecurity.SACLPresent) && n.SACLOffset() > 0 {
+		sd.SACL = new(ntsecurity.ACL)                               // FIXME: Validate ACL before allocating memory?
+		err = sd.SACL.UnmarshalBinary(data[n.SACLOffset()-offset:]) // FIXME: Use the correct end of the ACL byte slice?
+		if err != nil {
+			return
+		}
 	}
-	if d.Control.HasFlag(ntsecurity.DACLPresent) && n.DACLOffset() > 0 {
-		// FIXME: Validate ACL before allocating memory?
-		d.DACL = new(ntsecurity.ACL)
-		*d.DACL = ntsecurity.UnmarshalACL(s[n.DACLOffset():]) // FIXME: Use the correct end of the ACL byte slice?
+	if sd.Control.HasFlag(ntsecurity.DACLPresent) && n.DACLOffset() > 0 {
+		sd.DACL = new(ntsecurity.ACL)                               // FIXME: Validate ACL before allocating memory?
+		err = sd.DACL.UnmarshalBinary(data[n.DACLOffset()-offset:]) // FIXME: Use the correct end of the ACL byte slice?
+		if err != nil {
+			return
+		}
 	}
-	return d
+	return
 }

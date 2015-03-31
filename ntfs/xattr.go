@@ -7,13 +7,12 @@ import (
 )
 
 // ReadFileSD will return the security descriptor for the requested file
-func ReadFileSD(path string) (*ntsecurity.SecurityDescriptor, error) {
+func ReadFileSD(path string) (sd *ntsecurity.SecurityDescriptor, err error) {
 	bytes, err := ReadFileRawSD(path)
 	if err != nil {
 		return nil, err
 	}
-	sd := new(ntsecurity.SecurityDescriptor)
-	*sd = ntsecurity.UnmarshalSecurityDescriptor(bytes)
+	err = sd.UnmarshalBinary(bytes)
 	return sd, nil
 }
 

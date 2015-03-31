@@ -165,9 +165,15 @@ func main() {
 
 	switch inputMode {
 	case modeNTFS:
-		sd = ntsecurity.UnmarshalSecurityDescriptor(sdBytes)
+		err = sd.UnmarshalBinary(sdBytes)
+		if err != nil {
+			log.Fatal(err)
+		}
 	case modeSamba:
-		sd = samba.UnmarshalXAttr(sdBytes)
+		err = (*samba.SambaSecDescXAttr)(&sd).UnmarshalBinary(sdBytes)
+		if err != nil {
+			log.Fatal(err)
+		}
 	case modeSDDL:
 		log.Fatal("SDDL parsing has not been implemented yet")
 	}

@@ -1,9 +1,5 @@
 package ntsecurity
 
-func MarshalSecurityDescriptor(sd *SecurityDescriptor, b []byte) {
-	// TODO: Write this
-}
-
 const (
 	securityDescriptorFixedBytes = 1 + 1 + 2 + 4 + 4 + 4 + 4
 	sidFixedBytes                = 1 + 1 + 6
@@ -13,36 +9,67 @@ const (
 	objectACEFixedBytes          = 4 + 4
 )
 
-func MarshalSecurityDescriptorBytes(sd *SecurityDescriptor) int {
-	size := securityDescriptorFixedBytes
-	size += MarshalSIDBytes(sd.Owner)
-	size += MarshalSIDBytes(sd.Group)
-	if sd.Control.HasFlag(SACLPresent) {
-		size += MarshalACLBytes(sd.SACL)
-	}
-	if sd.Control.HasFlag(DACLPresent) {
-		size += MarshalACLBytes(sd.DACL)
-	}
-	return size
+func (sd *SecurityDescriptor) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, sd.BinaryLength())
+	err = sd.PutBinary(data)
+	return
 }
 
-func MarshalACLBytes(acl *ACL) int {
+func (sd *SecurityDescriptor) PutBinary(data []byte) (err error) {
+	err = nil
+	n := NativeSecurityDescriptor(data)
+	n.SetRevision(sd.Revision)
+	n.SetAlignment(sd.Alignment)
+	n.SetControl(sd.Control)
+	// TODO: Write this
+	return
+}
+
+func (sd *SecurityDescriptor) BinaryLength() (size int) {
+	size = securityDescriptorFixedBytes
+	size += sd.Owner.BinaryLength()
+	size += sd.Group.BinaryLength()
+	if sd.Control.HasFlag(SACLPresent) {
+		size += sd.SACL.BinaryLength()
+	}
+	if sd.Control.HasFlag(DACLPresent) {
+		size += sd.DACL.BinaryLength()
+	}
+	return
+}
+
+// MarshalACL reads an access control list from a byte slice containing
+// access control list data formatted according to an NT data layout.
+func (acl *ACL) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, acl.BinaryLength())
+	err = acl.PutBinary(data)
+	return
+}
+
+func (acl *ACL) PutBinary(data []byte) (err error) {
+	//n := NativeACL(data)
+	err = nil
+	// TODO: Write this function
+	return
+}
+
+func (acl *ACL) BinaryLength() int {
 	if acl == nil {
 		return 0
 	}
 	size := aclFixedBytes
 	for i := 0; i < len(acl.Entries); i++ {
-		size += MarshalACEBytes(&acl.Entries[i])
+		size += acl.Entries[i].BinaryLength()
 	}
 	return size
 }
 
-func MarshalACEBytes(ace *ACE) int {
+func (ace *ACE) BinaryLength() int {
 	size := aceHeaderFixedBytes
 	switch ace.Type {
 	case AccessAllowedControl, AccessDeniedControl, SystemAuditControl, SystemAlarmControl:
 		size += sidACEFixedBytes
-		size += MarshalSIDBytes(&ace.SID)
+		size += ace.SID.BinaryLength()
 	case AccessAllowedObjectControl, AccessDeniedObjectControl, SystemAuditObjectControl, SystemAlarmObjectControl:
 		size += objectACEFixedBytes
 		if ace.ObjectFlags.HasFlag(ObjectTypePresent) {
@@ -51,12 +78,12 @@ func MarshalACEBytes(ace *ACE) int {
 		if ace.ObjectFlags.HasFlag(InheritedObjectTypePresent) {
 			size += 16
 		}
-		size += MarshalSIDBytes(&ace.SID)
+		size += ace.SID.BinaryLength()
 	}
 	return size
 }
 
-func MarshalSIDBytes(sid *SID) int {
+func (sid *SID) BinaryLength() int {
 	if sid == nil {
 		return 0
 	}

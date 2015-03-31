@@ -164,8 +164,8 @@ func (b NativeACL) Count() uint16 {
 //
 // Note: Samba actually defines this as a uint32 instead of having a separate
 //       alignment uint16, but we're keeping them separate here to match NT.
-func (b NativeACL) SetCount() uint16 {
-	return binary.LittleEndian.Uint16(b[4:6])
+func (b NativeACL) SetCount(v uint16) {
+	binary.LittleEndian.PutUint16(b[4:6], v)
 }
 
 // Offset is a byte offset to the first access control entry.
@@ -192,6 +192,11 @@ type NativeACEHeader []byte
 // Type of the access control entry
 func (b NativeACEHeader) Type() AccessControlType { return AccessControlType(b[0]) }
 
+// SetType sets the type of the access control entry
+func (b NativeACEHeader) SetType(v AccessControlType) {
+	b[0] = uint8(v)
+}
+
 // Flags describing the access control entry
 func (b NativeACEHeader) Flags() AccessControlFlag { return AccessControlFlag(b[1]) }
 
@@ -214,7 +219,11 @@ func (b NativeACE) Mask() AccessMask {
 }
 
 // SID defines the security identifier that the access control entry applies to.
-func (b NativeACE) SID() SID { return UnmarshalSID(b[8:]) }
+func (b NativeACE) SID() SID {
+	var sid SID
+	sid.UnmarshalBinary(b[8:])
+	return sid
+}
 
 // NativeObjectACE is a byte slice wrapper that acts as a translator
 // for the on-disk representation of access control entries that apply to
@@ -241,7 +250,9 @@ func (b NativeObjectACE) ObjectType() GUID {
 	if !b.ObjectFlags().HasFlag(ObjectTypePresent) {
 		return GUID{}
 	}
-	return UnmarshalGUID(b[12:28])
+	var guid GUID
+	guid.UnmarshalBinary(b[12:28])
+	return guid
 }
 
 func (b NativeObjectACE) InheritedObjectType() GUID {
@@ -251,10 +262,12 @@ func (b NativeObjectACE) InheritedObjectType() GUID {
 	if !b.ObjectFlags().HasFlag(InheritedObjectTypePresent) {
 		return GUID{}
 	}
+	var guid GUID
 	if b.ObjectFlags().HasFlag(ObjectTypePresent) {
-		return UnmarshalGUID(b[28:44])
+		guid.UnmarshalBinary(b[28:44])
 	}
-	return UnmarshalGUID(b[12:28])
+	guid.UnmarshalBinary(b[12:28])
+	return guid
 }
 
 // SID defines the security identifier that the access control entry applies to.
@@ -269,7 +282,9 @@ func (b NativeObjectACE) SID() SID {
 	if b.ObjectFlags().HasFlag(InheritedObjectTypePresent) {
 		offset += 16
 	}
-	return UnmarshalSID(b[offset:])
+	var sid SID
+	sid.UnmarshalBinary(b[offset:])
+	return sid
 }
 
 // NativeSID is a byte slice wrapper that acts as a translator for the on-disk
