@@ -207,13 +207,28 @@ func main() {
 		fmt.Println(sd.SDDL())
 		os.Exit(0)
 	case modeNTFS:
-		fmt.Println("NTFS formatted output is not yet supported")
-		os.Exit(1)
+		if sdBytes, err = sd.MarshalBinary(); err != nil {
+			log.Fatal(err)
+		}
 	case modeSamba:
-		fmt.Println("Samba formatted output is not yet supported")
-		os.Exit(1)
+		if sdBytes, err = (*samba.SambaSecDescXAttr)(&sd).MarshalBinary(); err != nil {
+			log.Fatal(err)
+		}
 	default:
 		fmt.Println("Invalid output mode")
+		fmt.Println(usage)
+		os.Exit(1)
+	}
+
+	switch encoding {
+	case encBase64, "":
+		fmt.Println(base64.StdEncoding.EncodeToString(sdBytes))
+		os.Exit(0)
+	case encHex:
+		fmt.Println(hex.EncodeToString(sdBytes))
+		os.Exit(0)
+	default:
+		fmt.Println("Invalid encoding")
 		fmt.Println(usage)
 		os.Exit(1)
 	}

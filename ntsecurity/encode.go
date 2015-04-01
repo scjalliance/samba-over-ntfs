@@ -21,11 +21,56 @@ func (sd *SecurityDescriptor) PutBinary(data []byte) (err error) {
 	n.SetRevision(sd.Revision)
 	n.SetAlignment(sd.Alignment)
 	n.SetControl(sd.Control)
-	// TODO: Write this
+	// Write out the relative offsets
+	var offset uint32 = securityDescriptorFixedBytes
+	if sd.Owner != nil {
+		n.SetOwnerOffset(offset)
+		offset += sd.Owner.BinaryLength()
+	} else {
+		n.SetOwnerOffset(0)
+	}
+	if sd.Group != nil {
+		n.SetGroupOffset(offset)
+		offset += sd.Group.BinaryLength()
+	} else {
+		n.SetGroupOffset(0)
+	}
+	if sd.Control.HasFlag(SACLPresent) && sd.SACL != nil {
+		n.SetSACLOffset(offset)
+		offset += sd.SACL.BinaryLength()
+	} else {
+		n.SetSACLOffset(0)
+	}
+	if sd.Control.HasFlag(DACLPresent) && sd.DACL != nil {
+		n.SetDACLOffset(offset)
+		offset += sd.DACL.BinaryLength()
+	} else {
+		n.SetDACLOffset(0)
+	}
+	// Write out the data
+	offset = securityDescriptorFixedBytes
+	if sd.Owner != nil {
+		if err = sd.Owner.PutBinary(data[offset:]); err != nil {
+			return
+		}
+		offset += sd.Owner.BinaryLength()
+	}
+	if sd.Group != nil {
+		if err = sd.Group.PutBinary(data[offset:]); err != nil {
+			return
+		}
+		offset += sd.Group.BinaryLength()
+	}
+	if sd.Control.HasFlag(SACLPresent) && sd.SACL != nil {
+		// TODO: Write this
+	}
+	if sd.Control.HasFlag(DACLPresent) && sd.DACL != nil {
+		// TODO: Write this
+	}
 	return
 }
 
-func (sd *SecurityDescriptor) BinaryLength() (size int) {
+func (sd *SecurityDescriptor) BinaryLength() (size uint32) {
 	size = securityDescriptorFixedBytes
 	size += sd.Owner.BinaryLength()
 	size += sd.Group.BinaryLength()
@@ -53,19 +98,19 @@ func (acl *ACL) PutBinary(data []byte) (err error) {
 	return
 }
 
-func (acl *ACL) BinaryLength() int {
+func (acl *ACL) BinaryLength() (size uint32) {
 	if acl == nil {
 		return 0
 	}
-	size := aclFixedBytes
+	size = aclFixedBytes
 	for i := 0; i < len(acl.Entries); i++ {
 		size += acl.Entries[i].BinaryLength()
 	}
-	return size
+	return
 }
 
-func (ace *ACE) BinaryLength() int {
-	size := aceHeaderFixedBytes
+func (ace *ACE) BinaryLength() (size uint32) {
+	size = aceHeaderFixedBytes
 	switch ace.Type {
 	case AccessAllowedControl, AccessDeniedControl, SystemAuditControl, SystemAlarmControl:
 		size += sidACEFixedBytes
@@ -80,12 +125,17 @@ func (ace *ACE) BinaryLength() int {
 		}
 		size += ace.SID.BinaryLength()
 	}
-	return size
+	return
 }
 
-func (sid *SID) BinaryLength() int {
+func (sid *SID) PutBinary(data []byte) (err error) {
+	// TODO: Write this
+	return
+}
+
+func (sid *SID) BinaryLength() uint32 {
 	if sid == nil {
 		return 0
 	}
-	return sidFixedBytes + len(sid.SubAuthority)*4
+	return sidFixedBytes + uint32(len(sid.SubAuthority))*4
 }
