@@ -109,7 +109,7 @@ func (acl *ACL) PutBinary(data []byte) (err error) {
 	n.SetAlignment1(acl.Alignment1)
 	count := len(acl.Entries)
 	if count > math.MaxUint16 {
-		return errors.New("Acess control list has too many entries to encode properly: Count exceeds MaxUint16")
+		return errors.New("Access control list has too many entries to encode properly: Count exceeds MaxUint16")
 	}
 	n.SetCount(uint16(count))
 	n.SetAlignment2(acl.Alignment2)
