@@ -229,7 +229,7 @@ func NTIdentifierAuthority() IdentifierAuthority {
 	return IdentifierAuthority{0, 0, 0, 0, 0, 5}
 }
 
-// AcessControlType specifies the type of an access control entry and determines
+// AccessControlType specifies the type of an access control entry and determines
 // the data structure used to represent it
 type AccessControlType uint8
 
