@@ -150,7 +150,12 @@ func process(fp string) {
 				sdBytes, err = ntfs.ReadFileAttribute(fp, *xattrNTFS)
 			}
 			if err == nil {
-				sd := ntsecurity.UnmarshalSecurityDescriptor(sdBytes)
+				var sd ntsecurity.SecurityDescriptor
+				err := sd.UnmarshalBinary(sdBytes)
+				if err != nil {
+					// complain...
+					panic(err)
+				}
 				sd.SDDL() // should we be running this at all?  does it prove anything for our testing?
 				return
 			}
@@ -168,7 +173,12 @@ func process(fp string) {
 		if *source == "samba" || (*source == "auto" && sdBytes == nil) {
 			sdBytes, err = samba.ReadFileAttribute(fp, *xattrSamba)
 			if err == nil {
-				sd := samba.UnmarshalXAttr(sdBytes)
+				var sd ntsecurity.SecurityDescriptor
+				err := sd.UnmarshalBinary(sdBytes)
+				if err != nil {
+					// complain...
+					panic(err)
+				}
 				sd.SDDL() // should we be running this at all?  does it prove anything for our testing?
 				return
 			}
