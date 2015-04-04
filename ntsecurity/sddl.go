@@ -150,7 +150,7 @@ const (
 	sddlServerOperatorsTag             = "SO" // Server operators. The corresponding RID is DOMAIN_ALIAS_RID_SYSTEM_OPS.
 	sddlServiceTag                     = "SU" // Service logon user. This is a group identifier added to the token of a process when it was logged as a service. The corresponding logon type is LOGON32_LOGON_SERVICE. The corresponding RID is SECURITY_SERVICE_RID.
 	sddlLocalSystemTag                 = "SY" // Local system. The corresponding RID is SECURITY_LOCAL_SYSTEM_RID.
-	sddlEveryoneTag                    = "WD" // Everyone. The corresponding RID is SecurityWorldRid.
+	sddlEveryoneTag                    = "WD" // Everyone. The corresponding RID is SECURITY_WORLD_RID.
 )
 
 // SDDL returns a string representation of the security identifier in the format
