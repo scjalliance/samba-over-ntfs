@@ -47,14 +47,14 @@ type SID struct {
 }
 
 const (
-	// SidMinRevision indicates the minimum SID revision supported by the ntfsacl
-	// package
+	// SidMinRevision indicates the minimum SID revision supported by the
+	// ntsecurity package
 	SidMinRevision = 1
-	// SidMaxRevision indicates the maximum SID revision supported by the ntfsacl
-	// package
+	// SidMaxRevision indicates the maximum SID revision supported by the
+	// ntsecurity package
 	SidMaxRevision = 1
 	// SidMaxSubAuthorities indicates the maximum number of subauthorities
-	// supported by the ntfsacl package
+	// supported by the ntsecurity package
 	SidMaxSubAuthorities = 15
 )
 
