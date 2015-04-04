@@ -187,7 +187,7 @@ func (b IdentifierAuthority) Uint64() uint64 {
 
 var (
 	SecurityNullRelativeSID uint32 = 0
-	SecurityWorldRid        uint32 = 1
+	SecurityWorldRID        uint32 = 1
 )
 
 var (
