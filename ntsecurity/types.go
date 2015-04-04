@@ -172,16 +172,8 @@ func (b NativeACL) SetCount(v uint16) {
 //
 // The offset is in bytes and is relative to the start of the
 // NativeACL.
-func (b NativeACL) Offset() uint16 {
+func (b NativeACL) Offset() uint32 {
 	return 8
-}
-
-// SetOffset sets the byte offset to the first access control entry.
-//
-// The offset is in bytes and is relative to the start of the
-// NativeACL.
-func (b NativeACL) SetOffset(v uint16) {
-	binary.LittleEndian.PutUint16(b[6:8], v)
 }
 
 // NativeACEHeader is a byte slice wrapper that acts as a translator
@@ -200,8 +192,18 @@ func (b NativeACEHeader) SetType(v AccessControlType) {
 // Flags describing the access control entry
 func (b NativeACEHeader) Flags() AccessControlFlag { return AccessControlFlag(b[1]) }
 
-// Size in bytes of the access control entry
+// SetFlags sets the flags describing the access control entry
+func (b NativeACEHeader) SetFlags(v AccessControlFlag) {
+	b[1] = uint8(v)
+}
+
+// Size in bytes of the access control entry, including the header
 func (b NativeACEHeader) Size() uint16 { return binary.LittleEndian.Uint16(b[2:4]) }
+
+// SetSize sets the size in bytes of the access control entry, including the header
+func (b NativeACEHeader) SetSize(v uint16) {
+	binary.LittleEndian.PutUint16(b[2:4], v)
+}
 
 // NativeACE is a byte slice wrapper that acts as a translator for the on-disk
 // representation of access control entries that apply to security identifiers.
@@ -218,11 +220,22 @@ func (b NativeACE) Mask() AccessMask {
 	return AccessMask(binary.LittleEndian.Uint32(b[4:8]))
 }
 
+// SetMask sets the access mask of the access control entry, which encapsulates
+// the access privileges that the access control entry is specifying.
+func (b NativeACE) SetMask(v AccessMask) {
+	binary.LittleEndian.PutUint32(b[4:8], uint32(v))
+}
+
 // SID defines the security identifier that the access control entry applies to.
 func (b NativeACE) SID() SID {
 	var sid SID
-	sid.UnmarshalBinary(b[8:])
+	sid.UnmarshalBinary(b[8:]) // TODO: Decide whether we should leave this dependency here
 	return sid
+}
+
+// SetSID sets the security identifier that the access control entry applies to.
+func (b NativeACE) SetSID(v SID) {
+	v.PutBinary(b[8:]) // TODO: Decide whether we should leave this dependency here
 }
 
 // NativeObjectACE is a byte slice wrapper that acts as a translator
@@ -240,9 +253,20 @@ func (b NativeObjectACE) Mask() AccessMask {
 	return AccessMask(binary.LittleEndian.Uint32(b[4:8]))
 }
 
+// SetMask sets the access mask of the access control entry, which encapsulates
+// the access privileges that the access control entry is specifying.
+func (b NativeObjectACE) SetMask(v AccessMask) {
+	binary.LittleEndian.PutUint32(b[4:8], uint32(v))
+}
+
 // ObjectFlags
 func (b NativeObjectACE) ObjectFlags() ObjectAccessControlFlag {
 	return ObjectAccessControlFlag(binary.LittleEndian.Uint32(b[8:12]))
+}
+
+// SetObjectFlags
+func (b NativeObjectACE) SetObjectFlags(v ObjectAccessControlFlag) {
+	binary.LittleEndian.PutUint32(b[8:12], uint32(v))
 }
 
 // ObjectType
@@ -251,8 +275,16 @@ func (b NativeObjectACE) ObjectType() GUID {
 		return GUID{}
 	}
 	var guid GUID
-	guid.UnmarshalBinary(b[12:28])
+	guid.UnmarshalBinary(b[12:28]) // TODO: Decide whether we should leave this dependency here
 	return guid
+}
+
+// SetObjectType
+func (b NativeObjectACE) SetObjectType(v GUID) {
+	if !b.ObjectFlags().HasFlag(ObjectTypePresent) {
+		return
+	}
+	v.PutBinary(b[12:28]) // TODO: Decide whether we should leave this dependency here
 }
 
 func (b NativeObjectACE) InheritedObjectType() GUID {
@@ -264,10 +296,23 @@ func (b NativeObjectACE) InheritedObjectType() GUID {
 	}
 	var guid GUID
 	if b.ObjectFlags().HasFlag(ObjectTypePresent) {
-		guid.UnmarshalBinary(b[28:44])
+		guid.UnmarshalBinary(b[28:44]) // TODO: Decide whether we should leave this dependency here
 	}
-	guid.UnmarshalBinary(b[12:28])
+	guid.UnmarshalBinary(b[12:28]) // TODO: Decide whether we should leave this dependency here
 	return guid
+}
+
+func (b NativeObjectACE) SetInheritedObjectType(v GUID) {
+	// The location of this member varies based on the flags.
+	//
+	// See https://msdn.microsoft.com/en-us/library/windows/desktop/aa374857
+	if !b.ObjectFlags().HasFlag(InheritedObjectTypePresent) {
+		return
+	}
+	if b.ObjectFlags().HasFlag(ObjectTypePresent) {
+		v.PutBinary(b[28:44]) // TODO: Decide whether we should leave this dependency here
+	}
+	v.PutBinary(b[12:28]) // TODO: Decide whether we should leave this dependency here
 }
 
 // SID defines the security identifier that the access control entry applies to.
@@ -283,8 +328,23 @@ func (b NativeObjectACE) SID() SID {
 		offset += 16
 	}
 	var sid SID
-	sid.UnmarshalBinary(b[offset:])
+	sid.UnmarshalBinary(b[offset:]) // TODO: Decide whether we should leave this dependency here
 	return sid
+}
+
+// SetSID sets the security identifier that the access control entry applies to.
+func (b NativeObjectACE) SetSID(v SID) {
+	// The location of this member varies based on the flags.
+	//
+	// See https://msdn.microsoft.com/en-us/library/windows/desktop/aa374857
+	offset := 12
+	if b.ObjectFlags().HasFlag(ObjectTypePresent) {
+		offset += 16
+	}
+	if b.ObjectFlags().HasFlag(InheritedObjectTypePresent) {
+		offset += 16
+	}
+	v.PutBinary(b[offset:]) // TODO: Decide whether we should leave this dependency here
 }
 
 // NativeSID is a byte slice wrapper that acts as a translator for the on-disk
@@ -297,16 +357,27 @@ func (b NativeSID) Revision() uint8 {
 	return b[0]
 }
 
-// SubAuthorityCount returns the number of SubAuthority elements in the
-// security identifier.
-func (b NativeSID) SubAuthorityCount() uint8 {
-	return b[1]
+// SetRevision sets the revision level of the security identifier.
+func (b NativeSID) SetRevision(v uint8) {
+	b[0] = v
 }
 
 // IdentifierAuthority returns the identifier authority of the security
 // identifier.
 func (b NativeSID) IdentifierAuthority() IdentifierAuthority {
 	return IdentifierAuthority{b[2], b[3], b[4], b[5], b[6], b[7]} // Big endian
+}
+
+// SetIdentifierAuthority sets the identifier authority of the security
+// identifier.
+func (b NativeSID) SetIdentifierAuthority(v IdentifierAuthority) {
+	copy(b[2:8], v[:])
+}
+
+// SubAuthorityCount returns the number of SubAuthority elements in the
+// security identifier.
+func (b NativeSID) SubAuthorityCount() uint8 {
+	return b[1]
 }
 
 // SubAuthority returns the sub authority of the given index for the security
@@ -317,22 +388,47 @@ func (b NativeSID) SubAuthority(index uint8) uint32 {
 	return binary.LittleEndian.Uint32(b[start:end])
 }
 
+// SetSubAuthority sets the sub authorities in the security identifier and also
+// updates the SubAuthorityCount to match.
+func (b NativeSID) SetSubAuthority(v []uint32) {
+	// TODO: Verify that len(v) isn't beyond some limit?
+	length := len(v)
+	b[1] = uint8(length)
+	for i := 0; i < length; i++ {
+		start := 8 + i*4
+		end := start + 4
+		binary.LittleEndian.PutUint32(b[start:end], v[i])
+	}
+}
+
 // NativeGUID is a byte slice wrapper that acts as a translator for the on-disk
 // representation of globally unique identifiers. One of its functions is to
 // convert member values into the appropriate endianness.
 type NativeGUID []byte
 
-// Byte returns the byte of the GUID at the given index
-func (b NativeGUID) Byte(index uint8) byte {
-	// TODO: Verify that we have the correct byte order for these things
-	switch {
-	case index >= 8:
-		return b[index]
-	case index >= 6:
-		return b[13-index] // Swap little-endian bytes 6 and 7
-	case index >= 4:
-		return b[9-index] // Swap little-endian bytes 4 and 5
-	default:
-		return b[3-index] // Swap little-endian bytes 0 through 3
-	}
+func (b NativeGUID) Value() (guid GUID) {
+	// See http://en.wikipedia.org/wiki/Globally_unique_identifier
+	guid[3] = b[0]
+	guid[2] = b[1]
+	guid[1] = b[2]
+	guid[0] = b[3]
+	guid[5] = b[4]
+	guid[4] = b[5]
+	guid[7] = b[6]
+	guid[6] = b[7]
+	copy(guid[8:16], b[8:16])
+	return
+}
+
+func (b NativeGUID) SetValue(v GUID) {
+	// See http://en.wikipedia.org/wiki/Globally_unique_identifier
+	b[0] = v[3]
+	b[1] = v[2]
+	b[2] = v[1]
+	b[3] = v[0]
+	b[4] = v[5]
+	b[5] = v[4]
+	b[6] = v[7]
+	b[7] = v[6]
+	copy(b[8:16], v[8:16])
 }

@@ -1,5 +1,10 @@
 package ntsecurity
 
+import (
+	"errors"
+	"math"
+)
+
 const (
 	securityDescriptorFixedBytes = 1 + 1 + 2 + 4 + 4 + 4 + 4
 	sidFixedBytes                = 1 + 1 + 6
@@ -16,13 +21,13 @@ func (sd *SecurityDescriptor) MarshalBinary() (data []byte, err error) {
 }
 
 func (sd *SecurityDescriptor) PutBinary(data []byte) (err error) {
-	err = nil
 	n := NativeSecurityDescriptor(data)
 	n.SetRevision(sd.Revision)
 	n.SetAlignment(sd.Alignment)
 	n.SetControl(sd.Control)
+
 	// Write out the relative offsets
-	var offset uint32 = securityDescriptorFixedBytes
+	offset := uint32(securityDescriptorFixedBytes)
 	if sd.Owner != nil {
 		n.SetOwnerOffset(offset)
 		offset += sd.Owner.BinaryLength()
@@ -47,6 +52,7 @@ func (sd *SecurityDescriptor) PutBinary(data []byte) (err error) {
 	} else {
 		n.SetDACLOffset(0)
 	}
+
 	// Write out the data
 	offset = securityDescriptorFixedBytes
 	if sd.Owner != nil {
@@ -62,10 +68,16 @@ func (sd *SecurityDescriptor) PutBinary(data []byte) (err error) {
 		offset += sd.Group.BinaryLength()
 	}
 	if sd.Control.HasFlag(SACLPresent) && sd.SACL != nil {
-		// TODO: Write this
+		if err = sd.SACL.PutBinary(data[offset:]); err != nil {
+			return
+		}
+		offset += sd.SACL.BinaryLength()
 	}
 	if sd.Control.HasFlag(DACLPresent) && sd.DACL != nil {
-		// TODO: Write this
+		if err = sd.DACL.PutBinary(data[offset:]); err != nil {
+			return
+		}
+		offset += sd.DACL.BinaryLength()
 	}
 	return
 }
@@ -83,7 +95,7 @@ func (sd *SecurityDescriptor) BinaryLength() (size uint32) {
 	return
 }
 
-// MarshalACL reads an access control list from a byte slice containing
+// MarshalBinary writes an access control list to a byte slice containing
 // access control list data formatted according to an NT data layout.
 func (acl *ACL) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, acl.BinaryLength())
@@ -92,9 +104,24 @@ func (acl *ACL) MarshalBinary() (data []byte, err error) {
 }
 
 func (acl *ACL) PutBinary(data []byte) (err error) {
-	//n := NativeACL(data)
-	err = nil
-	// TODO: Write this function
+	n := NativeACL(data)
+	n.SetRevision(acl.Revision)
+	n.SetAlignment1(acl.Alignment1)
+	count := len(acl.Entries)
+	if count > math.MaxUint16 {
+		return errors.New("Acess control list has too many entries to encode properly: Count exceeds MaxUint16")
+	}
+	n.SetCount(uint16(count))
+	n.SetAlignment2(acl.Alignment2)
+	offset := n.Offset()
+	for i := 0; i < count; i++ {
+		//fmt.Printf("%d %d %d %v\n", i, count, offset, acl.Entries[i].SID.String())
+		var size uint16
+		if size, err = acl.Entries[i].PutBinary(data[offset:]); err != nil { // FIXME: Use the correct end of the ACE byte slice?
+			return
+		}
+		offset += uint32(size)
+	}
 	return
 }
 
@@ -107,6 +134,50 @@ func (acl *ACL) BinaryLength() (size uint32) {
 		size += acl.Entries[i].BinaryLength()
 	}
 	return
+}
+
+func (ace *ACE) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, ace.BinaryLength())
+	_, err = ace.PutBinary(data)
+	return
+}
+
+func (ace *ACE) PutBinary(data []byte) (size uint16, err error) {
+	bl := ace.BinaryLength()
+	if bl > math.MaxUint16 {
+		err = errors.New("Access control entry is too large to encode properly: Size exceeds MaxUint16")
+		return
+	}
+	size = uint16(bl)
+
+	h := NativeACEHeader(data)
+	h.SetType(ace.Type)
+	h.SetFlags(ace.Flags)
+	h.SetSize(size)
+
+	switch ace.Type {
+	case AccessAllowedControl, AccessDeniedControl, SystemAuditControl, SystemAlarmControl:
+		n := NativeACE(data)
+		n.SetMask(ace.Mask)
+		n.SetSID(ace.SID)
+		//fmt.Printf("%v %v %v\n", ace.Type, ace.SID.String(), n.SID().String())
+		return
+	case AccessAllowedObjectControl, AccessDeniedObjectControl, SystemAuditObjectControl, SystemAlarmObjectControl:
+		n := NativeObjectACE(data)
+		n.SetMask(ace.Mask)
+		n.SetObjectFlags(ace.ObjectFlags)
+		if ace.ObjectFlags.HasFlag(ObjectTypePresent) {
+			n.SetObjectType(ace.ObjectType)
+		}
+		if ace.ObjectFlags.HasFlag(InheritedObjectTypePresent) {
+			n.SetInheritedObjectType(ace.InheritedObjectType)
+		}
+		n.SetSID(ace.SID)
+		return
+	default:
+		// TODO: Decide whether this should return an error
+		return
+	}
 }
 
 func (ace *ACE) BinaryLength() (size uint32) {
@@ -129,13 +200,34 @@ func (ace *ACE) BinaryLength() (size uint32) {
 }
 
 func (sid *SID) PutBinary(data []byte) (err error) {
-	// TODO: Write this
+	n := NativeSID(data)
+	n.SetRevision(sid.Revision)
+	n.SetIdentifierAuthority(sid.IdentifierAuthority)
+	n.SetSubAuthority(sid.SubAuthority)
 	return
 }
 
-func (sid *SID) BinaryLength() uint32 {
+func (sid *SID) BinaryLength() (size uint32) {
 	if sid == nil {
 		return 0
 	}
-	return sidFixedBytes + uint32(len(sid.SubAuthority))*4
+	size = sidFixedBytes
+	size += uint32(len(sid.SubAuthority)) * 4
+	return
+}
+
+func (guid *GUID) MarshalBinary() (data []byte, err error) {
+	data = make([]byte, guid.BinaryLength())
+	err = guid.PutBinary(data)
+	return
+}
+
+func (guid *GUID) PutBinary(data []byte) (err error) {
+	n := NativeGUID(data)
+	n.SetValue(*guid)
+	return
+}
+
+func (guid *GUID) BinaryLength() (size uint32) {
+	return 16
 }
