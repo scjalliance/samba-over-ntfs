@@ -161,9 +161,9 @@ func (sid SID) SDDL() string {
 	// TODO: Return constants for all well known values
 	if sid.Revision == 1 && sid.SubAuthorityCount > 0 {
 		switch sid.IdentifierAuthority {
-		case worldIdentifierAuthority:
+		case WorldIdentifierAuthority():
 			switch sid.SubAuthority[0] {
-			case SecurityWorldRid:
+			case SecurityWorldRID:
 				return sddlEveryoneTag
 			}
 		}

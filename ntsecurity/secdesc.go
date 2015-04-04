@@ -190,15 +190,6 @@ var (
 	SecurityWorldRID        uint32 = 1
 )
 
-var (
-	nullIdentifierAuthority      = IdentifierAuthority{0, 0, 0, 0, 0, 0} // S-1-0
-	worldIdentifierAuthority     = IdentifierAuthority{0, 0, 0, 0, 0, 1} // S-1-1
-	localIdentifierAuthority     = IdentifierAuthority{0, 0, 0, 0, 0, 2} // S-1-2
-	creatorIdentifierAuthority   = IdentifierAuthority{0, 0, 0, 0, 0, 3} // S-1-3
-	nonUniqueIdentifierAuthority = IdentifierAuthority{0, 0, 0, 0, 0, 4} // S-1-4
-	ntIdentifierAuthority        = IdentifierAuthority{0, 0, 0, 0, 0, 5} // S-1-5
-)
-
 // NullIdentifierAuthority represents SID S-1-0
 func NullIdentifierAuthority() IdentifierAuthority {
 	return IdentifierAuthority{0, 0, 0, 0, 0, 0}
