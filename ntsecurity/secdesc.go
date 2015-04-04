@@ -111,7 +111,7 @@ type ACE struct {
 type SecurityDescriptorControl uint16
 
 const (
-	// SeOwnerDefaulted is a boolean flag which, when set, indicates that the
+	// OwnerDefaulted is a boolean flag which, when set, indicates that the
 	// SID pointed to by the Owner field was provided by a
 	// defaulting mechanism rather than explicitly provided by the
 	// original provider of the security descriptor. This may
@@ -119,20 +119,20 @@ const (
 	// of an owner.
 	OwnerDefaulted SecurityDescriptorControl = 0x0001
 
-	// SeGroupDefaulted is a boolean flag which, when set, indicates that the
+	// GroupDefaulted is a boolean flag which, when set, indicates that the
 	// SID in the Group field was provided by a defaulting mechanism
 	// rather than explicitly provided by the original provider of
 	// the security descriptor.  This may affect the treatment of
 	// the SID with respect to inheritance of a primary group.
 	GroupDefaulted SecurityDescriptorControl = 0x0002
 
-	// SeDaclPresent is a boolean flag which, when set, indicates that the
+	// DACLPresent is a boolean flag which, when set, indicates that the
 	// security descriptor contains a discretionary ACL. If this
 	// flag is set and the Dacl field of the SECURITY_DESCRIPTOR is
 	// null, then a null ACL is explicitly being specified.
 	DACLPresent SecurityDescriptorControl = 0x0004
 
-	// SeDaclDefaulted is a boolean flag which, when set, indicates that the
+	// DACLDefaulted is a boolean flag which, when set, indicates that the
 	// ACL pointed to by the Dacl field was provided by a defaulting
 	// mechanism rather than explicitly provided by the original
 	// provider of the security descriptor. This may affect the
@@ -140,14 +140,14 @@ const (
 	// This flag is ignored if the DaclPresent flag is not set.
 	DACLDefaulted SecurityDescriptorControl = 0x0008
 
-	// SeSaclPresent is a boolean flag which, when set, indicates that the
+	// SACLPresent is a boolean flag which, when set, indicates that the
 	// security descriptor contains a system ACL pointed to by the
 	// Sacl field. If this flag is set and the Sacl field of the
 	// SECURITY_DESCRIPTOR is null, then an empty (but present)
 	// ACL is being specified.
 	SACLPresent SecurityDescriptorControl = 0x0010
 
-	// SeSaclDefaulted is a boolean flag which, when set, indicates that the
+	// SACLDefaulted is a boolean flag which, when set, indicates that the
 	// ACL pointed to by the Sacl field was provided by a defaulting
 	// mechanism rather than explicitly provided by the original
 	// provider of the security descriptor. This may affect the
@@ -163,7 +163,7 @@ const (
 	SACLProtected      SecurityDescriptorControl = 0x2000
 	RmControlValid     SecurityDescriptorControl = 0x4000
 
-	// SeSelfRelative is a boolean flag which, when set, indicates that the
+	// SelfRelative is a boolean flag which, when set, indicates that the
 	// security descriptor is in self-relative form.  In this form,
 	// all fields of the security descriptor are contiguous in memory
 	// and all pointer fields are expressed as offsets from the
