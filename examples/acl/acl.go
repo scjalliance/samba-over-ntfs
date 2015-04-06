@@ -40,6 +40,7 @@ var (
 	inputMode            string
 	outputMode           string
 	encoding             string
+	raw                  bool
 )
 
 const (
@@ -51,6 +52,7 @@ const (
 	inputModeUsage            = "Format of input data (samba, ntfs, sddl)"
 	outputModeUsage           = "Format of output data (samba, ntfs, sddl)"
 	encodingUsage             = "Encoding of output data (b64, hex)"
+	rawUsage                  = "Performs a raw copy of the bytes instead of interpreting them"
 	shorthand                 = " (shorthand)"
 	usage                     = `Usage of acl.exe:
   -v, -value:          Value to be used as ACL attribute data
@@ -60,7 +62,8 @@ const (
   -da:                 Name of extended attribute in destination file
   -i, -in, -input:     Format of input data (samba, ntfs, sddl)
   -o, -out, -output:   Format of output data (samba, ntfs, sddl)
-  -e, -enc, -encoding: Encoding of output data (b64 [default], hex)`
+  -e, -enc, -encoding: Encoding of output data (b64 [default], hex)
+	-raw:                Performs a raw copy of the bytes instead of interpreting them`
 )
 
 func init() {
@@ -81,6 +84,7 @@ func init() {
 	flag.StringVar(&encoding, "encoding", "", encodingUsage)
 	flag.StringVar(&encoding, "enc", "", encodingUsage+shorthand)
 	flag.StringVar(&encoding, "e", "", encodingUsage+shorthand)
+	flag.BoolVar(&raw, "raw", false, rawUsage)
 }
 
 func main() {
@@ -93,8 +97,9 @@ func main() {
 
 	// Step 1: Grab the raw security descriptor bytes
 	var (
-		sdBytes []byte
-		err     error
+		inputBytes  []byte
+		outputBytes []byte
+		err         error
 	)
 
 	switch {
@@ -107,9 +112,9 @@ func main() {
 		switch inputMode {
 		case modeNTFS, modeSamba:
 			// Autodetect encoding for these input modes
-			sdBytes, err = base64.StdEncoding.DecodeString(value)
+			inputBytes, err = base64.StdEncoding.DecodeString(value)
 			if err != nil {
-				sdBytes, err = hex.DecodeString(value)
+				inputBytes, err = hex.DecodeString(value)
 				if err != nil {
 					fmt.Println("Input value must be encoded in hexadecimal or base64")
 					os.Exit(1)
@@ -133,18 +138,18 @@ func main() {
 		switch inputMode {
 		case modeNTFS:
 			if sourceAttribute == "" {
-				sdBytes, err = ntfs.ReadFileRawSD(sourceFilename)
+				inputBytes, err = ntfs.ReadFileRawSD(sourceFilename)
 			} else {
-				sdBytes, err = ntfs.ReadFileAttribute(sourceFilename, sourceAttribute)
+				inputBytes, err = ntfs.ReadFileAttribute(sourceFilename, sourceAttribute)
 			}
 			if err != nil {
 				log.Fatal(err)
 			}
 		case modeSamba:
 			if sourceAttribute == "" {
-				sdBytes, err = samba.ReadFileRawSD(sourceFilename)
+				inputBytes, err = samba.ReadFileRawSD(sourceFilename)
 			} else {
-				sdBytes, err = samba.ReadFileAttribute(sourceFilename, sourceAttribute)
+				inputBytes, err = samba.ReadFileAttribute(sourceFilename, sourceAttribute)
 			}
 		case modeSDDL:
 			fmt.Println("Invalid source mode while reading input from file attributes")
@@ -160,25 +165,47 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Step 2: Parse the input bytes
-	var sd ntsecurity.SecurityDescriptor
+	if raw && inputMode == outputMode && (inputMode == modeNTFS || inputMode == modeSamba) {
+		outputBytes = inputBytes
+	} else {
+		var sd ntsecurity.SecurityDescriptor
 
-	switch inputMode {
-	case modeNTFS:
-		err = sd.UnmarshalBinary(sdBytes)
-		if err != nil {
-			log.Fatal(err)
+		// Step 2: Unmarshal the input
+		switch inputMode {
+		case modeNTFS:
+			err = sd.UnmarshalBinary(inputBytes)
+			if err != nil {
+				log.Fatal(err)
+			}
+		case modeSamba:
+			err = (*samba.SambaSecDescXAttr)(&sd).UnmarshalBinary(inputBytes)
+			if err != nil {
+				log.Fatal(err)
+			}
+		case modeSDDL:
+			log.Fatal("SDDL parsing has not been implemented yet")
 		}
-	case modeSamba:
-		err = (*samba.SambaSecDescXAttr)(&sd).UnmarshalBinary(sdBytes)
-		if err != nil {
-			log.Fatal(err)
+
+		// Step 4: Marshal the output
+		switch outputMode {
+		case modeSDDL:
+			outputBytes = []byte(sd.SDDL())
+		case modeNTFS:
+			if outputBytes, err = sd.MarshalBinary(); err != nil {
+				log.Fatal(err)
+			}
+		case modeSamba:
+			if outputBytes, err = (*samba.SambaSecDescXAttr)(&sd).MarshalBinary(); err != nil {
+				log.Fatal(err)
+			}
+		default:
+			fmt.Println("Invalid output mode")
+			fmt.Println(usage)
+			os.Exit(1)
 		}
-	case modeSDDL:
-		log.Fatal("SDDL parsing has not been implemented yet")
 	}
 
-	// Step 3a: Write the output to the destination file
+	// Step 5a: Write the output to the destination
 	if destinationFilename != "" {
 		if _, err = os.Stat(destinationFilename); err != nil {
 			if os.IsNotExist(err) {
@@ -188,28 +215,20 @@ func main() {
 		}
 		switch outputMode {
 		case modeNTFS:
-			data, err := sd.MarshalBinary()
-			if err != nil {
-				log.Fatal(err)
-			}
 			if destinationAttribute == "" {
-				err = ntfs.WriteFileRawSD(destinationFilename, data)
+				err = ntfs.WriteFileRawSD(destinationFilename, outputBytes)
 			} else {
-				err = ntfs.WriteFileAttribute(destinationFilename, sourceAttribute, data)
+				err = ntfs.WriteFileAttribute(destinationFilename, sourceAttribute, outputBytes)
 			}
 			if err != nil {
 				log.Fatal(err)
 			}
 			os.Exit(0)
 		case modeSamba:
-			data, err := (*samba.SambaSecDescXAttr)(&sd).MarshalBinary()
-			if err != nil {
-				log.Fatal(err)
-			}
 			if destinationAttribute == "" {
-				err = samba.WriteFileRawSD(destinationFilename, data)
+				err = samba.WriteFileRawSD(destinationFilename, outputBytes)
 			} else {
-				err = samba.WriteFileAttribute(destinationFilename, sourceAttribute, data)
+				err = samba.WriteFileAttribute(destinationFilename, sourceAttribute, outputBytes)
 			}
 			if err != nil {
 				log.Fatal(err)
@@ -222,38 +241,28 @@ func main() {
 		default:
 			fmt.Println("Writing to a destination filename is not yet supported.")
 			os.Exit(1)
-			// if err := samba.Write(*destinationFilename, sdBytes); err != nil {
+			// if err := samba.Write(*destinationFilename, outputBytes); err != nil {
 			// 	log.Fatal(err)
 			// }
 		}
 	}
 
-	// Step 3b: Write the output to stdout
-	switch outputMode {
-	case modeSDDL:
+	// Step 5b: Write the output to stdout
+	if outputMode == modeSDDL {
 		// Write the SDDL representation of the security descriptor to the screen
-		fmt.Println(sd.SDDL())
+		fmt.Println(string(outputBytes))
 		os.Exit(0)
-	case modeNTFS:
-		if sdBytes, err = sd.MarshalBinary(); err != nil {
-			log.Fatal(err)
-		}
-	case modeSamba:
-		if sdBytes, err = (*samba.SambaSecDescXAttr)(&sd).MarshalBinary(); err != nil {
-			log.Fatal(err)
-		}
-	default:
-		fmt.Println("Invalid output mode")
-		fmt.Println(usage)
-		os.Exit(1)
 	}
 
 	switch encoding {
-	case encBase64, "":
-		fmt.Println(base64.StdEncoding.EncodeToString(sdBytes))
+	case encBase64:
+		fmt.Println(base64.StdEncoding.EncodeToString(outputBytes))
 		os.Exit(0)
 	case encHex:
-		fmt.Println(hex.EncodeToString(sdBytes))
+		fmt.Println(hex.EncodeToString(outputBytes))
+		os.Exit(0)
+	case "":
+		print(outputBytes)
 		os.Exit(0)
 	default:
 		fmt.Println("Invalid encoding")
