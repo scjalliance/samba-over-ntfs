@@ -108,7 +108,7 @@ func (acl *ACL) PutBinary(data []byte) (err error) {
 
 	size := acl.BinaryLength()
 	if size > math.MaxUint16 {
-		err = errors.New("Access control entry is too large to encode properly: Size exceeds MaxUint16")
+		err = errors.New("Access control list is too large to encode properly: Size exceeds MaxUint16")
 		return
 	}
 
