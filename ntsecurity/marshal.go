@@ -24,7 +24,7 @@ func (sd *SecurityDescriptor) PutBinary(data []byte) (err error) {
 	n := NativeSecurityDescriptor(data)
 	n.SetRevision(sd.Revision)
 	n.SetAlignment(sd.Alignment)
-	n.SetControl(sd.Control)
+	n.SetControl(sd.Control) // TODO: Consider enforcing SelfRelative
 
 	// Write out the relative offsets
 	offset := uint32(securityDescriptorFixedBytes)
@@ -105,12 +105,21 @@ func (acl *ACL) MarshalBinary() (data []byte, err error) {
 
 func (acl *ACL) PutBinary(data []byte) (err error) {
 	n := NativeACL(data)
-	n.SetRevision(acl.Revision)
-	n.SetAlignment1(acl.Alignment1)
+
+	size := acl.BinaryLength()
+	if size > math.MaxUint16 {
+		err = errors.New("Access control entry is too large to encode properly: Size exceeds MaxUint16")
+		return
+	}
+
 	count := len(acl.Entries)
 	if count > math.MaxUint16 {
 		return errors.New("Access control list has too many entries to encode properly: Count exceeds MaxUint16")
 	}
+
+	n.SetRevision(acl.Revision)
+	n.SetAlignment1(acl.Alignment1)
+	n.SetSize(uint16(size))
 	n.SetCount(uint16(count))
 	n.SetAlignment2(acl.Alignment2)
 	offset := n.Offset()
