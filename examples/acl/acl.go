@@ -187,6 +187,34 @@ func main() {
 			log.Fatal("Unable to access destination file: ", err)
 		}
 		switch outputMode {
+		case modeNTFS:
+			data, err := sd.MarshalBinary()
+			if err != nil {
+				log.Fatal(err)
+			}
+			if destinationAttribute == "" {
+				err = ntfs.WriteFileRawSD(destinationFilename, data)
+			} else {
+				err = ntfs.WriteFileAttribute(destinationFilename, sourceAttribute, data)
+			}
+			if err != nil {
+				log.Fatal(err)
+			}
+			os.Exit(0)
+		case modeSamba:
+			data, err := (*samba.SambaSecDescXAttr)(&sd).MarshalBinary()
+			if err != nil {
+				log.Fatal(err)
+			}
+			if destinationAttribute == "" {
+				err = samba.WriteFileRawSD(destinationFilename, data)
+			} else {
+				err = samba.WriteFileAttribute(destinationFilename, sourceAttribute, data)
+			}
+			if err != nil {
+				log.Fatal(err)
+			}
+			os.Exit(0)
 		case modeSDDL:
 			fmt.Println("Invalid destination mode while writing output to file attributes")
 			fmt.Println(usage)
@@ -200,7 +228,7 @@ func main() {
 		}
 	}
 
-	// Step 3a: Write the output to stdout
+	// Step 3b: Write the output to stdout
 	switch outputMode {
 	case modeSDDL:
 		// Write the SDDL representation of the security descriptor to the screen
