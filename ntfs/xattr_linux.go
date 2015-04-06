@@ -33,7 +33,7 @@ func WriteFileRawSD(path string, data []byte) error {
 	return WriteFileAttribute(path, AttributeName, data)
 }
 
-// WriteFileAttribute will write binary data to the specified file within the
+// WriteFileAttribute will write binary data to the specified file within
 // a particular extended attribute. Existing data will be overwritten
 func WriteFileAttribute(path string, attr string, data []byte) error {
 	return syscall.Setxattr(path, attr, data, xattrReplace)
