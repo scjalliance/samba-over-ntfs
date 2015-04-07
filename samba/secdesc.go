@@ -11,8 +11,31 @@ const (
 	XAttrSDHashTypeSha256 = 1
 )
 
-type SambaSecDescXAttr ntsecurity.SecurityDescriptor
-type SambaSecDescV4 ntsecurity.SecurityDescriptor
-type SambaSecDescV3 ntsecurity.SecurityDescriptor
-type SambaSecDescV2 ntsecurity.SecurityDescriptor
+type SambaSecDescHeader struct {
+	Version uint16
+}
+
+type SecurityDescriptor struct {
+	Version uint16
+	*ntsecurity.SecurityDescriptor
+}
+
+type SambaSecDescV4 struct {
+	SambaSecDescV3
+	Description string
+	Time        uint64
+	SysACLHash  [XAttrSDHashSize]uint8
+}
+
+type SambaSecDescV3 struct {
+	SambaSecDescV1
+	HashType uint16
+	Hash     [XAttrSDHashSize]uint8
+}
+
+type SambaSecDescV2 struct {
+	SambaSecDescV1
+	Hash [16]uint8
+}
+
 type SambaSecDescV1 ntsecurity.SecurityDescriptor

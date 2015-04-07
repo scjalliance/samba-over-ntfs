@@ -169,6 +169,7 @@ func main() {
 		outputBytes = inputBytes
 	} else {
 		var sd ntsecurity.SecurityDescriptor
+		var xa samba.SecurityDescriptor
 
 		// Step 2: Unmarshal the input
 		switch inputMode {
@@ -178,7 +179,8 @@ func main() {
 				log.Fatal(err)
 			}
 		case modeSamba:
-			err = (*samba.SambaSecDescXAttr)(&sd).UnmarshalBinary(inputBytes)
+			xa.SecurityDescriptor = &sd
+			err = xa.UnmarshalBinary(inputBytes)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -186,7 +188,7 @@ func main() {
 			log.Fatal("SDDL parsing has not been implemented yet")
 		}
 
-		// Step 4: Marshal the output
+		// Step 3: Marshal the output
 		switch outputMode {
 		case modeSDDL:
 			outputBytes = []byte(sd.SDDL())
@@ -195,7 +197,9 @@ func main() {
 				log.Fatal(err)
 			}
 		case modeSamba:
-			if outputBytes, err = (*samba.SambaSecDescXAttr)(&sd).MarshalBinary(); err != nil {
+			xa.SecurityDescriptor = &sd
+			xa.Version = 3
+			if outputBytes, err = xa.MarshalBinary(); err != nil {
 				log.Fatal(err)
 			}
 		default:
@@ -205,7 +209,7 @@ func main() {
 		}
 	}
 
-	// Step 5a: Write the output to the destination
+	// Step 4a: Write the output to the destination
 	if destinationFilename != "" {
 		if _, err = os.Stat(destinationFilename); err != nil {
 			if os.IsNotExist(err) {
@@ -247,7 +251,7 @@ func main() {
 		}
 	}
 
-	// Step 5b: Write the output to stdout
+	// Step 4b: Write the output to stdout
 	if outputMode == modeSDDL {
 		// Write the SDDL representation of the security descriptor to the screen
 		fmt.Println(string(outputBytes))

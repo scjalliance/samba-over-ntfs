@@ -102,10 +102,13 @@ func (b NativeSecurityDescriptorHashV4) SetHashType(hashType uint16) {
 }
 
 // Hash returns the 64-byte hash as a byte slice.
-func (b NativeSecurityDescriptorHashV4) Hash() []byte { return b[6:70] }
+func (b NativeSecurityDescriptorHashV4) Hash() (hash [64]byte) {
+	copy(hash[:], b[6:70])
+	return
+}
 
 // SetHash sets the 64-byte hash to the given byte slice.
-func (b NativeSecurityDescriptorHashV4) SetHash(hash []byte) { copy(b[6:70], hash[0:64]) }
+func (b NativeSecurityDescriptorHashV4) SetHash(hash []byte) { copy(b[6:70], hash[:]) }
 
 // Description of the entity responsible for generating the hash.
 func (b NativeSecurityDescriptorHashV4) Description() string {
@@ -174,7 +177,7 @@ func (b NativeSecurityDescriptorHashV4) SysACLHash() []uint8 {
 // NativeSecurityDescriptorHashV4. It determines the location within the stream
 // at which the hash is written.
 func (b NativeSecurityDescriptorHashV4) SetSysACLHash(hash []byte, offset int) int {
-	copy(b[offset:offset+64], hash[0:64])
+	copy(b[offset:offset+64], hash[:])
 	return offset + 64
 }
 
@@ -196,14 +199,102 @@ func (b NativeSecurityDescriptorHashV4) SecurityDescriptorOffset() uint32 {
 // samba/librpc/idl/security.idl
 type NativeSecurityDescriptorHashV3 []byte
 
+// ContainsSecurityDescriptor returns true if a security descriptor is present,
+// otherwise false.
+func (b NativeSecurityDescriptorHashV3) ContainsSecurityDescriptor() bool {
+	if binary.LittleEndian.Uint32(b[0:4]) > 0 {
+		return true
+	}
+	return false
+}
+
+// SetSecurityDescriptorPresence sets a value indicating the presence of
+// security descriptor data.
+func (b NativeSecurityDescriptorHashV3) SetSecurityDescriptorPresence(present bool) {
+	if present {
+		binary.LittleEndian.PutUint32(b[0:4], 0x00020004) // Matches Samba
+	} else {
+		binary.LittleEndian.PutUint32(b[0:4], 0x00000000)
+	}
+}
+
+// HashType returns the Samba hash type.
+func (b NativeSecurityDescriptorHashV3) HashType() uint16 { return binary.LittleEndian.Uint16(b[4:6]) }
+
+// SetHashType sets the Samba hash type.
+func (b NativeSecurityDescriptorHashV3) SetHashType(hashType uint16) {
+	binary.LittleEndian.PutUint16(b[4:6], hashType)
+}
+
+// Hash returns the 64-byte hash as a byte slice.
+func (b NativeSecurityDescriptorHashV3) Hash() []byte { return b[6:70] }
+
+// SetHash sets the 64-byte hash to the given byte slice.
+func (b NativeSecurityDescriptorHashV3) SetHash(hash []byte) { copy(b[6:70], hash[:]) }
+
+// SecurityDescriptorOffset is an offset to a security descriptor. It is only
+// valid if ContainsSecurityDescriptor() is true.
+//
+// The offset is in bytes and is relative to the start of the
+// NativeSecurityDescriptorHashV3.
+func (b NativeSecurityDescriptorHashV3) SecurityDescriptorOffset() uint32 {
+	return 70 // 4 + 2 + 64
+}
+
 // NativeSecurityDescriptorHashV2 is a byte slice wrapper that acts as a
 // translator for security descriptor and hash data formatted according to a
 // Samba NDR data layout version 2. One of its functions is to convert member
 // values into the appropriate endianness.
 //
 // See the definition of security_descriptor_hash_v2 in
-// samba/librpc/idl/security.idl
+// samba/librpc/idl/xattr.idl
 type NativeSecurityDescriptorHashV2 []byte
+
+// ContainsSecurityDescriptor returns true if a security descriptor is present,
+// otherwise false.
+func (b NativeSecurityDescriptorHashV2) ContainsSecurityDescriptor() bool {
+	if binary.LittleEndian.Uint32(b[0:4]) > 0 {
+		return true
+	}
+	return false
+}
+
+// SetSecurityDescriptorPresence sets a value indicating the presence of
+// security descriptor data.
+func (b NativeSecurityDescriptorHashV2) SetSecurityDescriptorPresence(present bool) {
+	if present {
+		binary.LittleEndian.PutUint32(b[0:4], 0x00020004) // Matches Samba
+	} else {
+		binary.LittleEndian.PutUint32(b[0:4], 0x00000000)
+	}
+}
+
+// SecurityDescriptorOffset is an offset to a security descriptor. It is only
+// valid if ContainsSecurityDescriptor() is true.
+//
+// The offset is in bytes and is relative to the start of the
+// NativeSecurityDescriptorHashV2.
+func (b NativeSecurityDescriptorHashV2) SecurityDescriptorOffset() uint32 {
+	return 20 // 4 + 16
+}
+
+// NativeSecurityDescriptorHashV1 is a byte slice wrapper that acts as a
+// translator for security descriptor and hash data formatted according to a
+// Samba NDR data layout version 1. One of its functions is to convert member
+// values into the appropriate endianness.
+//
+// See the definition of security_descriptor in
+// samba/librpc/idl/xattr.idl
+type NativeSecurityDescriptorHashV1 []byte
+
+// SecurityDescriptorOffset is an offset to a security descriptor. It is only
+// valid if ContainsSecurityDescriptor() is true.
+//
+// The offset is in bytes and is relative to the start of the
+// NativeSecurityDescriptorHashV3.
+func (b NativeSecurityDescriptorHashV1) SecurityDescriptorOffset() uint32 {
+	return 0
+}
 
 // NativeSecurityDescriptor is a byte slice wrapper that acts as a translator
 // for security descriptor data formatted according to a Samba NDR data layout

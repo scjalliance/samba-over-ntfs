@@ -1,68 +1,98 @@
 package samba
 
-import "go.scj.io/samba-over-ntfs/ntsecurity"
+import (
+	"crypto/sha256"
+	"errors"
+)
 
 const (
 	XattrDescription = "ntfs"
 )
 
 const (
-	xattrFixedBytes                        = 2 + 2 + 4
-	securityDescriptorV4PreambleFixedBytes = 4
-	securityDescriptorV4FixedBytes         = securityDescriptorV4PreambleFixedBytes + 2 + 64 + len(XattrDescription) + 8 + 64
+	xattrFixedBytes                = 2 + 2 + 4
+	securityDescriptorV4FixedBytes = 4 + 2 + 64 + 1 + 8 + 64 // Does not include description, but includes description terminator
+	securityDescriptorV3FixedBytes = 4 + 2 + 64
+	securityDescriptorV2FixedBytes = 0
 )
 
-func (sd *SambaSecDescXAttr) MarshalBinary() (data []byte, err error) {
+func (sd *SecurityDescriptor) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, sd.BinaryLength())
 	err = sd.PutBinary(data)
 	return
 }
 
-func (sd *SambaSecDescXAttr) PutBinary(data []byte) (err error) {
+func (sd *SecurityDescriptor) PutBinary(data []byte) (err error) {
 	// TODO: Take the version to write as a parameter? Or store the desired version in SambaSecDescXAttr?
 	// Note: Version 1 is for NT-only ACLs that are *not* based on a posix ACL
 	// Note: Version 2 is generally not used
 	// Note: Version 3 is for NT-only ACLs that are *not* based on a posix ACL (includes hash of NT descriptor)
 	// Note: Version 4 is for posix ACLs that have been translated into an NT equivalent (includes hash of NT descriptor and posix ACL)
-	n := NativeXAttr(data)
-	n.SetVersion(3)
+	attr := NativeXAttr(data)
+
+	attr.SetVersion(sd.Version)
 	if sd == nil {
-		n.SetSecurityDescriptorPresence(false)
+		attr.SetSecurityDescriptorPresence(false)
 		return
 	}
-	n.SetSecurityDescriptorPresence(true)
-	offset := n.SecurityDescriptorOffset()
-	return (*SambaSecDescV4)(sd).PutBinary(data[offset:], offset)
+	attr.SetSecurityDescriptorPresence(true)
+
+	offset1 := attr.SecurityDescriptorOffset()
+	offset2 := uint32(0)
+
+	switch sd.Version {
+	case 4:
+		n := NativeSecurityDescriptorHashV4(data[offset1:])
+		n.SetSecurityDescriptorPresence(true)
+		n.SetHashType(XAttrSDHashTypeSha256)
+		n.SetDescription(XattrDescription)
+		offset2 = n.SecurityDescriptorOffset()
+	case 3:
+		n := NativeSecurityDescriptorHashV3(data[offset1:])
+		n.SetSecurityDescriptorPresence(true)
+		n.SetHashType(XAttrSDHashTypeSha256)
+		offset2 = n.SecurityDescriptorOffset()
+	case 2:
+		n := NativeSecurityDescriptorHashV2(data[offset1:])
+		n.SetSecurityDescriptorPresence(true)
+		offset2 = n.SecurityDescriptorOffset()
+	case 1:
+		n := NativeSecurityDescriptorHashV1(data[offset1:])
+		offset2 = n.SecurityDescriptorOffset()
+	default:
+		return errors.New("Unknown Samba XAttr NTACL Version")
+	}
+
+	if err = sd.SecurityDescriptor.PutBinary(data, offset1+offset2); err != nil {
+		return
+	}
+
+	switch sd.Version {
+	case 4:
+		n := NativeSecurityDescriptorHashV4(data[offset1:])
+		hash := sha256.Sum256(data) // FIXME: Produce a V3 hash
+		n.SetHash(hash[:])
+	case 3:
+		n := NativeSecurityDescriptorHashV3(data[offset1:])
+		hash := sha256.Sum256(data)
+		n.SetHash(hash[:])
+	}
+	return
 }
 
-func (sd *SambaSecDescXAttr) BinaryLength() (size uint32) {
+func (sd *SecurityDescriptor) BinaryLength() (size uint32) {
 	size = xattrFixedBytes
 	if sd != nil {
-		size += (*SambaSecDescV4)(sd).BinaryLength()
-	}
-	return
-}
-
-func (sd *SambaSecDescV4) MarshalBinary() (data []byte, err error) {
-	data = make([]byte, sd.BinaryLength())
-	err = sd.PutBinary(data, 0)
-	return
-}
-
-func (sd *SambaSecDescV4) PutBinary(data []byte, offset uint32) (err error) {
-	n := NativeSecurityDescriptorHashV4(data)
-	if sd == nil {
-		n.SetSecurityDescriptorPresence(false)
-		return
-	}
-	n.SetSecurityDescriptorPresence(true)
-	return (*ntsecurity.SecurityDescriptor)(sd).PutBinary(data[4:])
-}
-
-func (sd *SambaSecDescV4) BinaryLength() (size uint32) {
-	size = securityDescriptorV4PreambleFixedBytes
-	if sd != nil {
-		size += (*ntsecurity.SecurityDescriptor)(sd).BinaryLength()
+		switch sd.Version {
+		case 4:
+			size += uint32(securityDescriptorV4FixedBytes)
+			size += uint32(len(XattrDescription))
+		case 3:
+			size += uint32(securityDescriptorV3FixedBytes)
+		case 2:
+			size += uint32(securityDescriptorV2FixedBytes)
+		}
+		size += sd.SecurityDescriptor.BinaryLength()
 	}
 	return
 }

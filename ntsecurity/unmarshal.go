@@ -5,7 +5,18 @@ import "errors"
 // UnmarshalBinary reads a security descriptor from a byte slice containing
 // security descriptor data formatted according to an NT data layout.
 func (sd *SecurityDescriptor) UnmarshalBinary(data []byte) (err error) {
-	n := NativeSecurityDescriptor(data)
+	return sd.UnmarshalBinaryOffset(data, 0)
+}
+
+// UnmarshalBinaryOffset reads a security descriptor from a byte slice
+// containing security descriptor data formatted according to an NT data layout.
+//
+// The offset is in bytes and is relative to the start of the byte slice. It
+// provides the location of the SecurityDescriptor data within
+// the stream. Relative offsets within the security descriptor are assumed to
+// be relative to the start the
+func (sd *SecurityDescriptor) UnmarshalBinaryOffset(data []byte, offset uint32) (err error) {
+	n := NativeSecurityDescriptor(data[offset:])
 	//fmt.Printf("%d %d %d %d\n", n.OwnerOffset(), n.GroupOffset(), n.SACLOffset(), n.DACLOffset())
 	sd.Revision = n.Revision()
 	sd.Alignment = n.Alignment()

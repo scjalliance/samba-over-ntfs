@@ -13,12 +13,14 @@ func ReadFileSD(path string) (*ntsecurity.SecurityDescriptor, error) {
 	if err != nil {
 		return nil, err
 	}
-	var xattr *SambaSecDescXAttr
-	err = xattr.UnmarshalBinary(bytes)
+
+	var sd SecurityDescriptor
+	err = sd.UnmarshalBinary(bytes)
 	if err != nil {
 		return nil, err
 	}
-	return (*ntsecurity.SecurityDescriptor)(xattr), nil
+
+	return sd.SecurityDescriptor, nil
 }
 
 // WriteFileSD will write the given security descriptor to the specified file

@@ -16,18 +16,19 @@ const (
 
 func (sd *SecurityDescriptor) MarshalBinary() (data []byte, err error) {
 	data = make([]byte, sd.BinaryLength())
-	err = sd.PutBinary(data)
+	err = sd.PutBinary(data, 0)
 	return
 }
 
-func (sd *SecurityDescriptor) PutBinary(data []byte) (err error) {
-	n := NativeSecurityDescriptor(data)
+func (sd *SecurityDescriptor) PutBinary(data []byte, offset uint32) (err error) {
+	n := NativeSecurityDescriptor(data[offset:])
 	n.SetRevision(sd.Revision)
 	n.SetAlignment(sd.Alignment)
 	n.SetControl(sd.Control) // TODO: Consider enforcing SelfRelative
 
 	// Write out the relative offsets
-	offset := uint32(securityDescriptorFixedBytes)
+	start := offset + uint32(securityDescriptorFixedBytes)
+	offset = start
 	if sd.Owner != nil {
 		n.SetOwnerOffset(offset)
 		offset += sd.Owner.BinaryLength()
@@ -54,7 +55,7 @@ func (sd *SecurityDescriptor) PutBinary(data []byte) (err error) {
 	}
 
 	// Write out the data
-	offset = securityDescriptorFixedBytes
+	offset = start
 	if sd.Owner != nil {
 		if err = sd.Owner.PutBinary(data[offset:]); err != nil {
 			return
