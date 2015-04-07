@@ -198,7 +198,7 @@ func main() {
 			}
 		case modeSamba:
 			xa.SecurityDescriptor = &sd
-			xa.Version = 3
+			xa.Version = 1
 			if outputBytes, err = xa.MarshalBinary(); err != nil {
 				log.Fatal(err)
 			}
