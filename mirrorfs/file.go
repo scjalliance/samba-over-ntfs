@@ -1,7 +1,7 @@
 package mirrorfs
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"bazil.org/fuse"
@@ -26,12 +26,12 @@ func NewFile(file *os.File) (File, error) {
 }
 
 func (f File) Attr(a *fuse.Attr) {
-	fmt.Printf("FILE ATTR: %s", f.Name())
+	log.Printf("FILE ATTR: %s", f.Name())
 	attrOSToFuse(f.File, a)
 }
 
 func (f File) Forget() {
-	fmt.Printf("FILE FORGET: %s", f.Name())
+	log.Printf("FILE FORGET: %s", f.Name())
 	f.File.Close()
 }
 
@@ -39,7 +39,7 @@ func (f File) Forget() {
 var _ = fs.NodeOpener(&File{})
 
 func (f *File) Open(req *fuse.OpenRequest, resp *fuse.OpenResponse, intr fs.Intr) (fs.Handle, fuse.Error) {
-	fmt.Printf("FILE OPEN: %s", f.Name())
+	log.Printf("FILE OPEN: %s", f.Name())
 	r, err := f.Open()
 	if err != nil {
 		return nil, err

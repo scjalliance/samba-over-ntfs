@@ -1,7 +1,7 @@
 package mirrorfs
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -30,18 +30,18 @@ func NewDir(file *os.File) (Dir, error) {
 }
 
 func (d Dir) Attr(a *fuse.Attr) {
-	fmt.Printf("DIR ATTR: %s", d.Name())
+	log.Printf("DIR ATTR: %s", d.Name())
 	attrOSToFuse(d.File, a)
 }
 
 func (d Dir) Forget() {
-	fmt.Printf("DIR FORGET: %s", d.Name())
+	log.Printf("DIR FORGET: %s", d.Name())
 	d.File.Close()
 }
 
 func (d Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
 	path := filepath.Join(d.Name(), req.Name)
-	fmt.Printf("DIR LOOKUP: %s : %s", req.Name, path)
+	log.Printf("DIR LOOKUP: %s : %s", req.Name, path)
 	file, err := os.Open(path)
 	if err != nil {
 		return Dir{}, fuse.ENOENT // FIXME: Correct error response?
@@ -51,7 +51,7 @@ func (d Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Loo
 
 func (d Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 	var out []fuse.Dirent
-	fmt.Printf("DIR READDIR: %s", d.Name())
+	log.Printf("DIR READDIR: %s", d.Name())
 	entries, err := d.Readdir(0)
 	if err != nil {
 		return out, fuse.ENOENT // FIXME: Correct error response?
