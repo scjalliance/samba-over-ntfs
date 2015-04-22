@@ -55,3 +55,7 @@ func Mount(path, mountpoint string) error {
 	}
 	return nil
 }
+
+func Unmount(mountpoint string) {
+	fuse.Unmount(mountpoint)
+}

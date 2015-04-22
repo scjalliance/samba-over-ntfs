@@ -10,8 +10,6 @@ import (
 	"syscall"
 
 	"go.scj.io/samba-over-ntfs/mirrorfs"
-
-	"bazil.org/fuse"
 )
 
 var progName = filepath.Base(os.Args[0])
@@ -40,20 +38,20 @@ func main() {
 		os.Exit(2)
 	}
 
-	if err := mirrorfs.Mount(path, mountpoint); err != nil {
-		log.Fatal(err)
-	}
-
 	go func() {
 		for s := range signalChan {
 			switch s {
 			case syscall.SIGHUP:
 				// reload config?  we're not actually subscribed to this
 			default:
-				fmt.Printf("Caught a %s signal, closing.\n", s)
-				fuse.Unmount(mountpoint)
+				fmt.Printf("\nCaught a %s signal, closing.\n", s)
+				mirrorfs.Unmount(mountpoint)
 				os.Exit(1)
 			}
 		}
 	}()
+
+	if err := mirrorfs.Mount(path, mountpoint); err != nil {
+		log.Fatal(err)
+	}
 }
