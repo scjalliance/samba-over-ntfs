@@ -29,4 +29,6 @@ func attrOSToFuse(f *os.File, a *fuse.Attr) {
 	//a.Crtime = a.Atime
 	a.Mode = fi.Mode()
 	a.Nlink = uint32(st.Nlink) // FIXME: Consider what we should do if Nlink doesn't fit in 32 bits
+	a.Uid = st.Uid
+	a.Gid = st.Gid
 }
