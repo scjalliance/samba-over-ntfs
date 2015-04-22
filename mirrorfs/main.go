@@ -29,12 +29,16 @@ func main() {
 	signal.Notify(signalChan, os.Interrupt, os.Kill, syscall.SIGQUIT)
 
 	if flag.NArg() != 2 {
-		Usage()
+		usage()
 		os.Exit(2)
 	}
 
 	path := flag.Arg(0)
 	mountpoint := flag.Arg(1)
+
+	if err := mount(path, mountpoint); err != nil {
+		log.Fatal(err)
+	}
 
 	go func() {
 		for s := range signalChan {
@@ -50,36 +54,40 @@ func main() {
 	}()
 }
 
-func mount(path, mountpoint string) {
-	file, err := os.Open(path)
-
+func mount(path, mountpoint string) error {
+	file, err := os.Open(filepath.Clean(path))
 	if err != nil {
-		// TODO: Handle the error
+		return err
+	}
+
+	root, err := NewFS(file)
+	if err != nil {
+		return err // FIXME: Correct error response?
 	}
 
 	c, err := fuse.Mount(
 		mountpoint,
 		fuse.FSName("helloworld"),
-		fuse.Subtype("hellofs"),
+		fuse.Subtype("mirrorfs"),
 		fuse.LocalVolume(),
 		fuse.VolumeName("Hello world!"),
 	)
-
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	defer fuse.Unmount(mountpoint)
 	defer c.Close()
 
-	err = fs.Serve(c, FS{file: file})
+	err = fs.Serve(c, root)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// check if the mount process has an error to report
 	<-c.Ready
 	if err := c.MountError; err != nil {
-		log.Fatal(err)
+		return err
 	}
+	return nil
 }

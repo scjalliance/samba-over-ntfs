@@ -1,9 +1,8 @@
 package mirrorfs
 
 import (
+	"fmt"
 	"os"
-
-	"golang.org/x/net/context"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
@@ -15,21 +14,33 @@ type File struct {
 
 var _ fs.Node = (*File)(nil)
 
-func (f *File) Attr(a *fuse.Attr) {
-	if fi, err := os.Stat(f.File.Name()); err != nil {
-		// TODO: Decide how to handle an error here
+func NewFile(file *os.File) (File, error) {
+	fi, err := file.Stat()
+	if err != nil {
+		return File{}, fuse.ENOENT // FIXME: Correct error response?
 	}
-	a.Size = fi.Size()
-	a.Mode = fi.Mode()
-	a.Mtime = fi.ModTime()
-	a.Ctime = fi.ModTime()
-	a.Crtime = fi.ModTime()
+	if fi.IsDir() {
+		return File{}, fuse.ENOENT // FIXME: Correct error response?
+	}
+	return File{file}, nil
 }
 
+func (f File) Attr(a *fuse.Attr) {
+	fmt.Printf("FILE ATTR: %s", f.Name())
+	attrOSToFuse(f.File, a)
+}
+
+func (f File) Forget() {
+	fmt.Printf("FILE FORGET: %s", f.Name())
+	f.File.Close()
+}
+
+/*
 var _ = fs.NodeOpener(&File{})
 
 func (f *File) Open(req *fuse.OpenRequest, resp *fuse.OpenResponse, intr fs.Intr) (fs.Handle, fuse.Error) {
-	r, err := f.File.Open()
+	fmt.Printf("FILE OPEN: %s", f.Name())
+	r, err := f.Open()
 	if err != nil {
 		return nil, err
 	}
@@ -47,3 +58,4 @@ func (f *file) Setattr(ctx context.Context, req *fuse.SetattrRequest, resp *fuse
 
 func (f *file) Fsync(ctx context.Context, req *fuse.FsyncRequest) error {
 }
+*/
