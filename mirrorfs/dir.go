@@ -77,6 +77,7 @@ func (d Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 	for _, fi := range entries {
 		out = append(out, direntOSToFuse(fi, fi.Name()))
 	}
+	d.Seek(0, 0) // Reset the position so that subsequent calls will start at the beginning
 	return out, nil
 }
 
