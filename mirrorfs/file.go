@@ -1,6 +1,7 @@
 package mirrorfs
 
 import (
+	"io"
 	"log"
 	"os"
 
@@ -71,8 +72,17 @@ func (f File) Removexattr(ctx context.Context, req *fuse.RemovexattrRequest) (er
 }
 */
 
-func (f *file) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
-	f.File.ReadAt(resp.Data, int64(req.Offset))
+var _ = fs.HandleReader(&File{})
+
+func (f File) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
+	log.Printf("FILE READ: %s %v", f.Name(), req)
+	data := resp.Data[:req.Size] // Bazil allocates the data with a capacity of req.Size but initializes its length to 0
+	n, err := f.File.ReadAt(data, int64(req.Offset))
+	resp.Data = data[:n]
+	if err == io.EOF {
+		return nil
+	}
+	return err
 }
 
 /*
