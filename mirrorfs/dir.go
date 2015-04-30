@@ -13,10 +13,8 @@ import (
 
 // Dir implements both Node and Handle for directory handling
 type Dir struct {
-	*os.File
+	Node
 }
-
-var _ fs.Node = (*Dir)(nil)
 
 func NewDir(file *os.File) (Dir, error) {
 	fi, err := file.Stat()
@@ -24,21 +22,9 @@ func NewDir(file *os.File) (Dir, error) {
 		return Dir{}, fuse.ENOENT // FIXME: Correct error response?
 	}
 	if fi.IsDir() {
-		return Dir{file}, nil
+		return Dir{Node{file}}, nil
 	}
 	return Dir{}, fuse.ENOENT // FIXME: Correct error response?
-}
-
-func (d Dir) Attr(a *fuse.Attr) {
-	log.Printf("DIR ATTR: %s", d.Name())
-	attrOSToFuse(d.File, a)
-}
-
-var _ = fs.NodeForgetter(&Dir{})
-
-func (d Dir) Forget() {
-	log.Printf("DIR FORGET: %s", d.Name())
-	d.File.Close()
 }
 
 var _ = fs.NodeRequestLookuper(&Dir{})
@@ -80,35 +66,3 @@ func (d Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 	d.Seek(0, 0) // Reset the position so that subsequent calls will start at the beginning
 	return out, nil
 }
-
-var _ = fs.NodeGetxattrer(&Dir{})
-
-func (d Dir) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) (err error) {
-	log.Printf("DIR GETXATTR: %s %v", d.Name(), req)
-	resp.Xattr, err = getFileXAttr(d.File, req.Name, req.Size, req.Position)
-	return
-}
-
-var _ = fs.NodeListxattrer(&Dir{})
-
-func (d Dir) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) (err error) {
-	log.Printf("DIR LISTXATTR: %s %v", d.Name(), req)
-	resp.Xattr, err = listFileXAttr(d.File, req.Size, req.Position)
-	return
-}
-
-/*
-var _ = fs.NodeSetxattrer(&Dir{})
-
-func (d Dir) Setxattr(ctx context.Context, req *fuse.SetxattrRequest) (err error) {
-	log.Printf("DIR SETXATTR: %s %v", d.Name(), req)
-	return nil
-}
-
-var _ = fs.NodeRemovexattrer(&Dir{})
-
-func (d Dir) Removexattr(ctx context.Context, req *fuse.RemovexattrRequest) (err error) {
-	log.Printf("DIR REMOVEXATTR: %s %v", d.Name(), req)
-	return nil
-}
-*/

@@ -23,18 +23,7 @@ func NewFS(file *os.File) (FS, error) {
 		return FS{}, err // FIXME: Correct error response?
 	}
 	if fi.IsDir() {
-		return FS{Dir{file}}, nil
+		return FS{Dir{Node{file}}}, nil
 	}
 	return FS{}, fuse.ENOENT // FIXME: Correct error response?
-}
-
-func NewNode(file *os.File) (fs.Node, error) {
-	fi, err := file.Stat()
-	if err != nil {
-		return Dir{}, fuse.ENOENT // FIXME: Correct error response?
-	}
-	if fi.IsDir() {
-		return Dir{file}, nil
-	}
-	return File{file}, nil
 }
