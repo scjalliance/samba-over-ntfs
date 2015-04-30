@@ -42,7 +42,7 @@ func (f File) Forget() {
 var _ = fs.NodeGetxattrer(&File{})
 
 func (f File) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) (err error) {
-	log.Printf("FILE GETXATTR: %s : %s (size: %v, position: %v)", f.Name(), req.Name, req.Size, req.Position)
+	log.Printf("FILE GETXATTR: %s %v", f.Name(), req)
 	resp.Xattr, err = getFileXAttr(f.File, req.Name, req.Size, req.Position)
 	return
 }
@@ -50,29 +50,32 @@ func (f File) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fus
 var _ = fs.NodeListxattrer(&File{})
 
 func (f File) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) (err error) {
-	log.Printf("FILE LISTXATTR: %s (size: %v, position: %v)", f.Name(), req.Size, req.Position)
+	log.Printf("FILE LISTXATTR: %s %v", f.Name(), req)
 	resp.Xattr, err = listFileXAttr(f.File, req.Size, req.Position)
 	return
 }
 
 /*
-var _ = fs.NodeOpener(&File{})
+var _ = fs.NodeSetxattrer(&File{})
 
-func (f *File) Open(req *fuse.OpenRequest, resp *fuse.OpenResponse, intr fs.Intr) (fs.Handle, fuse.Error) {
-	log.Printf("FILE OPEN: %s", f.Name())
-	r, err := f.Open()
-	if err != nil {
-		return nil, err
-	}
-	// individual entries inside a zip file are not seekable
-	resp.Flags |= fuse.OpenNonSeekable
-	return f, nil
+func (f File) Setxattr(ctx context.Context, req *fuse.SetxattrRequest) (err error) {
+	log.Printf("FILE SETXATTR: %s %v", f.Name(), req)
+	return nil
 }
+
+var _ = fs.NodeRemovexattrer(&File{})
+
+func (f File) Removexattr(ctx context.Context, req *fuse.RemovexattrRequest) (err error) {
+	log.Printf("FILE REMOVEXATTR: %s %v", f.Name(), req)
+	return nil
+}
+*/
 
 func (f *file) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
 	f.File.ReadAt(resp.Data, int64(req.Offset))
 }
 
+/*
 func (f *file) Setattr(ctx context.Context, req *fuse.SetattrRequest, resp *fuse.SetattrResponse) error {
 }
 

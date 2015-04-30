@@ -71,7 +71,7 @@ func (d Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 var _ = fs.NodeGetxattrer(&Dir{})
 
 func (d Dir) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) (err error) {
-	log.Printf("DIR GETXATTR: %s : %s (size: %v, position: %v)", d.Name(), req.Name, req.Size, req.Position)
+	log.Printf("DIR GETXATTR: %s %v", d.Name(), req)
 	resp.Xattr, err = getFileXAttr(d.File, req.Name, req.Size, req.Position)
 	return
 }
@@ -79,7 +79,23 @@ func (d Dir) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse
 var _ = fs.NodeListxattrer(&Dir{})
 
 func (d Dir) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) (err error) {
-	log.Printf("DIR LISTXATTR: %s (size: %v, position: %v)", d.Name(), req.Size, req.Position)
+	log.Printf("DIR LISTXATTR: %s %v", d.Name(), req)
 	resp.Xattr, err = listFileXAttr(d.File, req.Size, req.Position)
 	return
 }
+
+/*
+var _ = fs.NodeSetxattrer(&Dir{})
+
+func (d Dir) Setxattr(ctx context.Context, req *fuse.SetxattrRequest) (err error) {
+	log.Printf("DIR SETXATTR: %s %v", d.Name(), req)
+	return nil
+}
+
+var _ = fs.NodeRemovexattrer(&Dir{})
+
+func (d Dir) Removexattr(ctx context.Context, req *fuse.RemovexattrRequest) (err error) {
+	log.Printf("DIR REMOVEXATTR: %s %v", d.Name(), req)
+	return nil
+}
+*/
