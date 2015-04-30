@@ -56,14 +56,26 @@ func (d Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Loo
 var _ = fs.HandleReadDirAller(&Dir{})
 
 func (d Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
-	var out []fuse.Dirent
 	log.Printf("DIR READDIR: %s", d.Name())
+	var out []fuse.Dirent
+	// Self
+	self, err := d.File.Stat()
+	if err == nil {
+		out = append(out, direntOSToFuse(self, "."))
+	}
+	// Parent
+	parent, err := os.Stat(filepath.Join(d.Name(), ".."))
+	if err == nil {
+		out = append(out, direntOSToFuse(parent, ".."))
+	}
+	// Children
+	// FIXME: Stream the dirents instead of slurping them
 	entries, err := d.Readdir(0)
 	if err != nil {
 		return nil, fuse.ENOENT // FIXME: Correct error response?
 	}
 	for _, fi := range entries {
-		out = append(out, direntOSToFuse(fi))
+		out = append(out, direntOSToFuse(fi, fi.Name()))
 	}
 	return out, nil
 }

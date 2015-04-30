@@ -8,12 +8,12 @@ import (
 	"bazil.org/fuse"
 )
 
-func direntOSToFuse(fi os.FileInfo) fuse.Dirent {
+func direntOSToFuse(fi os.FileInfo, name string) fuse.Dirent {
 	st := fi.Sys().(*syscall.Stat_t)
 	return fuse.Dirent{
 		Inode: st.Ino,
 		Type:  fuse.DirentType(st.Mode & syscall.S_IFMT >> 12), // See definition of fuse.DirentType for context
-		Name:  fi.Name(),
+		Name:  name,
 	}
 }
 
