@@ -34,42 +34,12 @@ func attrOSToFuse(f *os.File, a *fuse.Attr) {
 	a.Gid = st.Gid
 }
 
-const (
-	listXAttrSize = 10000
-)
-
-/*
-func getXAttrOSToFuse(f *os.File) ([]byte, error) {
-	fd := int(f.Fd())
-	length, err := fgetxattr(fd, nil) // Get the length of the xattr
-	if err != nil {
-		return nil, err
-	}
-	for i := 0; i < 2; i++ {
-		if length == 0 {
-			break
-		}
-		buffer := make([]byte, length)
-		length, err = fgetxattr(fd, buffer[:]) // Get the xattr bytes
-		switch err {
-		case nil:
-			return buffer, nil // Success
-		case syscall.ERANGE:
-			continue // The size of the list increased between the two calls to flistxattr. Try again with the new length.
-		default:
-			return nil, err // Some other error
-		}
-	}
-	return nil, err // No XAttrs
-}
-*/
-
-func getFileXAttr(f *os.File, attr string, size uint32, position uint32) (xattr []byte, err error) {
+func getFileXAttr(f *os.File, attr string, size uint32, position uint32) ([]byte, error) {
 	// Note: position is always zero for linux build targets
 	fd := int(f.Fd())
 	length, err := fgetxattr(fd, attr, nil) // Get the length of the xattr
 	if err != nil {
-		return
+		return nil, err
 	}
 	if size == 0 {
 		// By specifying a size of 0, the caller indicates that they only want the
@@ -81,6 +51,9 @@ func getFileXAttr(f *os.File, attr string, size uint32, position uint32) (xattr 
 		// the length of the xattr, but that's what the bazil fuse library
 		// currently expects of us.
 		return make([]byte, length), nil
+	}
+	if length > int(size) {
+		return nil, fuse.ERANGE
 	}
 	for i := 0; i < 5; i++ {
 		buffer := make([]byte, length)
@@ -96,7 +69,7 @@ func getFileXAttr(f *os.File, attr string, size uint32, position uint32) (xattr 
 		if err == syscall.ERANGE {
 			if newLength <= length {
 				// ERANGE should never be returned when there is sufficient room in the
-				// buffer. If it does the underlying file system is
+				// buffer. If it does then the underlying file system is
 				// probably misbehaving. Bail with ENOTSUP.
 				// TODO: Consider panicking instead
 				return nil, fuse.ENOTSUP
@@ -115,12 +88,12 @@ func getFileXAttr(f *os.File, attr string, size uint32, position uint32) (xattr 
 	return nil, fuse.ERANGE // Too many ERANGE errors (should be an exceedingly rare case)
 }
 
-func listFileXAttr(f *os.File, size uint32, position uint32) (xattr []byte, err error) {
+func listFileXAttr(f *os.File, size uint32, position uint32) ([]byte, error) {
 	// Note: position is always zero for linux build targets
 	fd := int(f.Fd())
 	length, err := flistxattr(fd, nil) // Get the length of the xattr
 	if err != nil {
-		return
+		return nil, err
 	}
 	if size == 0 {
 		// By specifying a size of 0, the caller indicates that they only want the
@@ -133,6 +106,10 @@ func listFileXAttr(f *os.File, size uint32, position uint32) (xattr []byte, err 
 		// currently expects of us.
 		return make([]byte, length), nil
 	}
+	if length > int(size) {
+		return nil, fuse.ERANGE
+	}
+	// Race conditions could lead to us allocating a buffer that is too small; we'll make up to 5 attempts to get it right
 	for i := 0; i < 5; i++ {
 		buffer := make([]byte, length)
 		newLength, err := flistxattr(fd, buffer) // Get the xattr list bytes
@@ -147,7 +124,7 @@ func listFileXAttr(f *os.File, size uint32, position uint32) (xattr []byte, err 
 		if err == syscall.ERANGE {
 			if newLength <= length {
 				// ERANGE should never be returned when there is sufficient room in the
-				// buffer. If it does the underlying file system is
+				// buffer. If it does then the underlying file system is
 				// probably misbehaving. Bail with ENOTSUP.
 				// TODO: Consider panicking instead
 				return nil, fuse.ENOTSUP
