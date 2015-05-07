@@ -39,7 +39,8 @@ func getFileXAttr(f *os.File, attr string, size uint32, position uint32) ([]byte
 	fd := int(f.Fd())
 	length, err := fgetxattr(fd, attr, nil) // Get the length of the xattr
 	if err != nil {
-		return nil, err
+		//log.Print(err)
+		return nil, errorOSToFuse(err)
 	}
 	if size == 0 {
 		// By specifying a size of 0, the caller indicates that they only want the
@@ -83,7 +84,7 @@ func getFileXAttr(f *os.File, attr string, size uint32, position uint32) ([]byte
 			}
 			continue
 		}
-		return nil, err // Some other error
+		return nil, errorOSToFuse(err) // Some other error
 	}
 	return nil, fuse.ERANGE // Too many ERANGE errors (should be an exceedingly rare case)
 }
@@ -93,7 +94,8 @@ func listFileXAttr(f *os.File, size uint32, position uint32) ([]byte, error) {
 	fd := int(f.Fd())
 	length, err := flistxattr(fd, nil) // Get the length of the xattr
 	if err != nil {
-		return nil, err
+		//log.Print(err)
+		return nil, errorOSToFuse(err)
 	}
 	if size == 0 {
 		// By specifying a size of 0, the caller indicates that they only want the
@@ -138,9 +140,36 @@ func listFileXAttr(f *os.File, size uint32, position uint32) ([]byte, error) {
 			}
 			continue
 		}
-		return nil, err // Some other error
+		return nil, errorOSToFuse(err) // Some other error
 	}
 	return nil, fuse.ERANGE // Too many ERANGE errors (should be an exceedingly rare case)
+}
+
+func errorOSToFuse(err error) error {
+	switch err {
+	case syscall.ENOSYS:
+		return fuse.ENOSYS
+	case syscall.ESTALE:
+		return fuse.ESTALE
+	case syscall.ENOENT:
+		return fuse.ENOENT
+	case syscall.EIO:
+		return fuse.EIO
+	case syscall.EPERM:
+		return fuse.EPERM
+	case syscall.EINTR:
+		return fuse.EINTR
+	case syscall.ERANGE:
+		return fuse.ERANGE
+	case syscall.ENOTSUP:
+		return fuse.ENOTSUP
+	case syscall.EEXIST:
+		return fuse.EEXIST
+	case syscall.ENODATA:
+		return fuse.ENODATA
+	default:
+		return err
+	}
 }
 
 func fgetxattr(fd int, attr string, dest []byte) (sz int, err error) {
