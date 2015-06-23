@@ -34,7 +34,7 @@ func attrOSToFuse(f *os.File, a *fuse.Attr) {
 	a.Gid = st.Gid
 }
 
-func getFileXAttr(f *os.File, attr string, size uint32, position uint32) ([]byte, error) {
+func GetFileXAttr(f *os.File, attr string, size uint32, position uint32) ([]byte, error) {
 	// Note: position is always zero for linux build targets
 	fd := int(f.Fd())
 	length, err := fgetxattr(fd, attr, nil) // Get the length of the xattr
@@ -89,7 +89,7 @@ func getFileXAttr(f *os.File, attr string, size uint32, position uint32) ([]byte
 	return nil, fuse.ERANGE // Too many ERANGE errors (should be an exceedingly rare case)
 }
 
-func listFileXAttr(f *os.File, size uint32, position uint32) ([]byte, error) {
+func ListFileXAttr(f *os.File, size uint32, position uint32) ([]byte, error) {
 	// Note: position is always zero for linux build targets
 	fd := int(f.Fd())
 	length, err := flistxattr(fd, nil) // Get the length of the xattr

@@ -8,7 +8,9 @@ import (
 	"bazil.org/fuse/fs"
 )
 
-func Mount(path, mountpoint string) error {
+type NodeCreator func(*os.File) (fs.FS, error)
+
+func Mount(path, mountpoint string, creator NodeCreator) error {
 	path, err := filepath.Abs(path)
 	if err != nil {
 		return err
@@ -24,7 +26,7 @@ func Mount(path, mountpoint string) error {
 		return err
 	}
 
-	root, err := NewFS(file)
+	root, err := creator(file)
 	if err != nil {
 		return err // FIXME: Correct error response?
 	}

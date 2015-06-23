@@ -1,8 +1,10 @@
 package mirrorfs
 
 import (
+	"io"
 	"log"
 	"os"
+	"path/filepath"
 
 	"golang.org/x/net/context"
 
@@ -13,6 +15,38 @@ import (
 type Node struct {
 	*os.File
 }
+
+func NewNode(file *os.File) (Node, error) {
+	_, err := file.Stat()
+	if err != nil {
+		return Node{}, fuse.ENOENT // FIXME: Correct error response?
+	}
+	return Node{file}, nil
+}
+
+func (n Node) IsDir() bool {
+	if fi, _ := n.File.Stat(); fi.IsDir() {
+		return true
+	}
+	return false
+}
+
+func (n Node) Kind() string {
+	if n.IsDir() {
+		return "DIR"
+	}
+	return "FILE"
+}
+
+// FS Methods
+
+var _ fs.FS = (*Node)(nil)
+
+func (f Node) Root() (fs.Node, error) {
+	return f, nil
+}
+
+// Node Methods
 
 var _ fs.Node = (*Node)(nil)
 
@@ -32,7 +66,7 @@ var _ = fs.NodeGetxattrer(&Node{})
 
 func (n Node) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) (err error) {
 	log.Printf("%s GETXATTR: %s %v", n.Kind(), n.Name(), req)
-	resp.Xattr, err = getFileXAttr(n.File, req.Name, req.Size, req.Position)
+	resp.Xattr, err = GetFileXAttr(n.File, req.Name, req.Size, req.Position)
 	return
 }
 
@@ -40,7 +74,7 @@ var _ = fs.NodeListxattrer(&Node{})
 
 func (n Node) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) (err error) {
 	log.Printf("%s LISTXATTR: %s %v", n.Kind(), n.Name(), req)
-	resp.Xattr, err = listFileXAttr(n.File, req.Size, req.Position)
+	resp.Xattr, err = ListFileXAttr(n.File, req.Size, req.Position)
 	return
 }
 
@@ -60,20 +94,60 @@ func (f File) Removexattr(ctx context.Context, req *fuse.RemovexattrRequest) (er
 }
 */
 
-func (n Node) Kind() string {
-	if fi, _ := n.File.Stat(); fi.IsDir() {
-		return "DIR"
+// Directory methods
+
+var _ = fs.NodeRequestLookuper(&Node{})
+
+func (d Node) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
+	//fi, err := file.Stat()
+	path := filepath.Join(d.Name(), req.Name)
+	log.Printf("%s LOOKUP: %s : %s", d.Kind(), req.Name, path)
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fuse.ENOENT // FIXME: Correct error response?
 	}
-	return "FILE"
+	return NewNode(file)
 }
 
-func NewNode(file *os.File) (fs.Node, error) {
-	fi, err := file.Stat()
+var _ = fs.HandleReadDirAller(&Node{})
+
+func (d Node) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
+	log.Printf("%s READDIR: %s", d.Kind(), d.Name())
+	var out []fuse.Dirent
+	// Self
+	self, err := d.File.Stat()
+	if err == nil {
+		out = append(out, direntOSToFuse(self, "."))
+	}
+	// Parent
+	parent, err := os.Stat(filepath.Join(d.Name(), ".."))
+	if err == nil {
+		out = append(out, direntOSToFuse(parent, ".."))
+	}
+	// Children
+	// FIXME: Stream the dirents instead of slurping them
+	entries, err := d.Readdir(0)
 	if err != nil {
-		return Dir{}, fuse.ENOENT // FIXME: Correct error response?
+		return nil, fuse.ENOENT // FIXME: Correct error response?
 	}
-	if fi.IsDir() {
-		return Dir{Node{file}}, nil
+	for _, fi := range entries {
+		out = append(out, direntOSToFuse(fi, fi.Name()))
 	}
-	return File{Node{file}}, nil
+	d.Seek(0, 0) // Reset the position so that subsequent calls will start at the beginning
+	return out, nil
+}
+
+// File methods
+
+var _ = fs.HandleReader(&Node{})
+
+func (f Node) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
+	log.Printf("FILE READ: %s %v", f.Name(), req)
+	data := resp.Data[:req.Size] // Bazil allocates the data with a capacity of req.Size but initializes its length to 0
+	n, err := f.File.ReadAt(data, int64(req.Offset))
+	resp.Data = data[:n]
+	if err == io.EOF {
+		return nil
+	}
+	return err
 }

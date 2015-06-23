@@ -8,6 +8,8 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
+
+	"go.scj.io/samba-over-ntfs/mirrorfs"
 )
 
 var progName = filepath.Base(os.Args[0])
@@ -43,13 +45,13 @@ func main() {
 				// reload config?  we're not actually subscribed to this
 			default:
 				fmt.Printf("\nCaught a %s signal, closing.\n", s)
-				Unmount(mountpoint)
+				mirrorfs.Unmount(mountpoint)
 				os.Exit(1)
 			}
 		}
 	}()
 
-	if err := Mount(path, mountpoint); err != nil {
+	if err := mirrorfs.Mount(path, mountpoint, NewFS); err != nil {
 		log.Fatal(err)
 	}
 }
