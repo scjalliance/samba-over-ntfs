@@ -51,7 +51,7 @@ func main() {
 		}
 	}()
 
-	if err := mirrorfs.Mount(path, mountpoint, NewFS); err != nil {
+	if err := mirrorfs.Mount(path, mountpoint, "samba-over-ntfs", "samba-over-ntfs", "samba-over-ntfs", NewFS); err != nil {
 		log.Fatal(err)
 	}
 }

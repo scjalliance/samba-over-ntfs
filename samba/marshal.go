@@ -6,14 +6,14 @@ import (
 )
 
 const (
-	XattrDescription = "ntfs"
+	XAttrDescription = "ntfs"
 )
 
 const (
-	xattrFixedBytes                = 2 + 2 + 4
-	securityDescriptorV4FixedBytes = 4 + 2 + 64 + 1 + 8 + 64 // Does not include description, but includes description terminator
-	securityDescriptorV3FixedBytes = 4 + 2 + 64
-	securityDescriptorV2FixedBytes = 0
+	XAttrFixedBytes                = 2 + 2 + 4
+	SecurityDescriptorV4FixedBytes = 4 + 2 + 64 + 1 + 8 + 64 // Does not include description, but includes description terminator
+	SecurityDescriptorV3FixedBytes = 4 + 2 + 64
+	SecurityDescriptorV2FixedBytes = 0
 )
 
 func (sd *SecurityDescriptor) MarshalBinary() (data []byte, err error) {
@@ -45,7 +45,7 @@ func (sd *SecurityDescriptor) PutBinary(data []byte) (err error) {
 		n := NativeSecurityDescriptorHashV4(data[offset1:])
 		n.SetSecurityDescriptorPresence(true)
 		n.SetHashType(XAttrSDHashTypeSha256)
-		n.SetDescription(XattrDescription)
+		n.SetDescription(XAttrDescription)
 		offset2 = n.SecurityDescriptorOffset()
 	case 3:
 		n := NativeSecurityDescriptorHashV3(data[offset1:])
@@ -81,16 +81,16 @@ func (sd *SecurityDescriptor) PutBinary(data []byte) (err error) {
 }
 
 func (sd *SecurityDescriptor) BinaryLength() (size uint32) {
-	size = xattrFixedBytes
+	size = XAttrFixedBytes
 	if sd != nil {
 		switch sd.Version {
 		case 4:
-			size += uint32(securityDescriptorV4FixedBytes)
-			size += uint32(len(XattrDescription))
+			size += uint32(SecurityDescriptorV4FixedBytes)
+			size += uint32(len(XAttrDescription))
 		case 3:
-			size += uint32(securityDescriptorV3FixedBytes)
+			size += uint32(SecurityDescriptorV3FixedBytes)
 		case 2:
-			size += uint32(securityDescriptorV2FixedBytes)
+			size += uint32(SecurityDescriptorV2FixedBytes)
 		}
 		size += sd.SecurityDescriptor.BinaryLength()
 	}

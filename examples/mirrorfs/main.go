@@ -51,7 +51,7 @@ func main() {
 		}
 	}()
 
-	if err := mirrorfs.Mount(path, mountpoint, mirrorfs.NewFS); err != nil {
+	if err := mirrorfs.Mount(path, mountpoint, "mirrorfs", "mirrorfs", "mirrorfs", mirrorfs.NewFS); err != nil {
 		log.Fatal(err)
 	}
 }

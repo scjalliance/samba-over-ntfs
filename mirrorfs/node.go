@@ -32,6 +32,9 @@ func (n Node) IsDir() bool {
 }
 
 func (n Node) Kind() string {
+	if n.File == nil {
+		return "NIL"
+	}
 	if n.IsDir() {
 		return "DIR"
 	}
@@ -50,9 +53,10 @@ func (f Node) Root() (fs.Node, error) {
 
 var _ fs.Node = (*Node)(nil)
 
-func (n Node) Attr(a *fuse.Attr) {
+func (n Node) Attr(ctx context.Context, a *fuse.Attr) error {
 	log.Printf("%s ATTR: %s", n.Kind(), n.Name())
 	attrOSToFuse(n.File, a)
+	return nil
 }
 
 var _ = fs.NodeForgetter(&Node{})

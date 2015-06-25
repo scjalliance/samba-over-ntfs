@@ -10,7 +10,7 @@ import (
 
 type NodeCreator func(*os.File) (fs.FS, error)
 
-func Mount(path, mountpoint string, creator NodeCreator) error {
+func Mount(path, mountpoint string, fsName string, subtype string, volumeName string, creator NodeCreator) error {
 	path, err := filepath.Abs(path)
 	if err != nil {
 		return err
@@ -33,10 +33,10 @@ func Mount(path, mountpoint string, creator NodeCreator) error {
 
 	c, err := fuse.Mount(
 		mountpoint,
-		fuse.FSName("helloworld"),
-		fuse.Subtype("mirrorfs"),
+		fuse.FSName(fsName),
+		fuse.Subtype(subtype),
 		fuse.LocalVolume(),
-		fuse.VolumeName("Hello world!"),
+		fuse.VolumeName(volumeName),
 	)
 	if err != nil {
 		return err
