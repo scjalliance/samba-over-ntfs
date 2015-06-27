@@ -11,7 +11,7 @@ import (
 
 	"go.scj.io/samba-over-ntfs/ntfs"
 	"go.scj.io/samba-over-ntfs/ntsecurity"
-	"go.scj.io/samba-over-ntfs/samba"
+	"go.scj.io/samba-over-ntfs/sambasecurity"
 )
 
 // Example of system.ntfs_acl value (don't include line breaks):
@@ -147,9 +147,9 @@ func main() {
 			}
 		case modeSamba:
 			if sourceAttribute == "" {
-				inputBytes, err = samba.ReadFileRawSD(sourceFilename)
+				inputBytes, err = sambasecurity.ReadFileRawSD(sourceFilename)
 			} else {
-				inputBytes, err = samba.ReadFileAttribute(sourceFilename, sourceAttribute)
+				inputBytes, err = sambasecurity.ReadFileAttribute(sourceFilename, sourceAttribute)
 			}
 		case modeSDDL:
 			fmt.Println("Invalid source mode while reading input from file attributes")
@@ -169,7 +169,7 @@ func main() {
 		outputBytes = inputBytes
 	} else {
 		var sd ntsecurity.SecurityDescriptor
-		var xa samba.SecurityDescriptor
+		var xa sambasecurity.SecurityDescriptor
 
 		// Step 2: Unmarshal the input
 		switch inputMode {
@@ -230,9 +230,9 @@ func main() {
 			os.Exit(0)
 		case modeSamba:
 			if destinationAttribute == "" {
-				err = samba.WriteFileRawSD(destinationFilename, outputBytes)
+				err = sambasecurity.WriteFileRawSD(destinationFilename, outputBytes)
 			} else {
-				err = samba.WriteFileAttribute(destinationFilename, sourceAttribute, outputBytes)
+				err = sambasecurity.WriteFileAttribute(destinationFilename, sourceAttribute, outputBytes)
 			}
 			if err != nil {
 				log.Fatal(err)
@@ -245,7 +245,7 @@ func main() {
 		default:
 			fmt.Println("Writing to a destination filename is not yet supported.")
 			os.Exit(1)
-			// if err := samba.Write(*destinationFilename, outputBytes); err != nil {
+			// if err := sambasecurity.Write(*destinationFilename, outputBytes); err != nil {
 			// 	log.Fatal(err)
 			// }
 		}

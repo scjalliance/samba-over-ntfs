@@ -13,7 +13,7 @@ import (
 
 	"go.scj.io/samba-over-ntfs/ntfs"
 	"go.scj.io/samba-over-ntfs/ntsecurity"
-	"go.scj.io/samba-over-ntfs/samba"
+	"go.scj.io/samba-over-ntfs/sambasecurity"
 )
 
 const (
@@ -171,7 +171,7 @@ func process(fp string) {
 			}
 		}
 		if *source == "samba" || (*source == "auto" && sdBytes == nil) {
-			sdBytes, err = samba.ReadFileAttribute(fp, *xattrSamba)
+			sdBytes, err = sambasecurity.ReadFileAttribute(fp, *xattrSamba)
 			if err == nil {
 				var sd ntsecurity.SecurityDescriptor
 				err := sd.UnmarshalBinary(sdBytes)

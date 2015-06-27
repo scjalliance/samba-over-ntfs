@@ -5,7 +5,7 @@ import (
 
 	"bazil.org/fuse"
 	"go.scj.io/samba-over-ntfs/ntsecurity"
-	"go.scj.io/samba-over-ntfs/samba"
+	"go.scj.io/samba-over-ntfs/sambasecurity"
 )
 
 const (
@@ -49,7 +49,7 @@ func convertXAttrList(data []byte, size uint32) ([]byte, error) {
 
 func convertXAttr(data []byte) ([]byte, error) {
 	var sd ntsecurity.SecurityDescriptor
-	var xa samba.SecurityDescriptor
+	var xa sambasecurity.SecurityDescriptor
 
 	err := sd.UnmarshalBinary(data)
 	if err != nil {

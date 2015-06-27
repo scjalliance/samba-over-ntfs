@@ -10,7 +10,7 @@ import (
 	"golang.org/x/net/context"
 
 	"go.scj.io/samba-over-ntfs/mirrorfs"
-	"go.scj.io/samba-over-ntfs/samba"
+	"go.scj.io/samba-over-ntfs/sambasecurity"
 )
 
 type Node struct {
@@ -50,7 +50,7 @@ func (n Node) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fus
 				// length measureed later on in the API is a very poor way to communicate
 				// the length of the xattr, but that's what the bazil fuse library
 				// currently expects of us.
-				length := len(xattr) + samba.XAttrFixedBytes // Samba v1 simply prepends a header to the NTFS format
+				length := len(xattr) + sambasecurity.XAttrFixedBytes // Samba v1 simply prepends a header to the NTFS format
 				xattr, err = make([]byte, length), nil
 			} else {
 				// Convert the ACL from NTFS format to Samba format

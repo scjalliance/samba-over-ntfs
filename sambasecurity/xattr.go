@@ -1,5 +1,4 @@
-// Package samba is intended as the Samba-side of the ACL equation.
-package samba
+package sambasecurity
 
 import (
 	"log"

@@ -1,4 +1,4 @@
-package samba
+package sambasecurity
 
 import "go.scj.io/samba-over-ntfs/ntsecurity"
 
